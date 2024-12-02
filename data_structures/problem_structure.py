@@ -56,11 +56,12 @@ class Problem():
 Klasa reprezentująca rozwiązanie.
 '''     
 class Solution():
-    def __init__(self, vector: list[tuple], problem: 'Problem'):
+    def __init__(self, vector: list[tuple], problem: 'Problem',  crossover_strategy: callable = None):
         self.size = len(vector)
         self.problem = problem
         self.vector = vector 
         self.fitness = self.evaluate_function()
+        self.crossover_strategy = crossover_strategy
 
     def mutation(self):
         self._perform_mutation()
@@ -84,7 +85,10 @@ class Solution():
         )
 
     def crossover(self, solution2: 'Solution' ) -> 'Solution':
-        pass
+        if self.crossover_strategy is None:
+            raise ValueError("Strategia krzyżowania nie została zdefiniowana.")
+        
+        return self.crossover_strategy(self, solution2)
 
     def evaluate_function(self):
         j = 0
