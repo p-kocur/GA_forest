@@ -34,6 +34,7 @@ self.b_wage - wypłata na dzień, jaką płacimy pracownikom z zewnątrz klasy B
 class Problem():
     def __init__(self, size: tuple[int], n: int, wage: float, our_workers: int, weather_prob: callable, penalty: float):
         self.n = n
+        self.size = size
         self.weather_prob = weather_prob
         self.penalty = penalty
         self.our_workers = our_workers
@@ -56,7 +57,7 @@ Klasa reprezentująca rozwiązanie.
 '''     
 class Solution():
     def __init__(self, vector: list[tuple], problem: 'Problem'):
-        self.generation_size = len(vector)
+        self.size = len(vector)
         self.problem = problem
         self.vector = vector 
         self.fitness = self.evaluate_function()
