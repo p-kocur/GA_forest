@@ -1,5 +1,6 @@
 import numpy as np
 import random
+from collections import defaultdict
 
 '''
 Klasa reprezentująca część lasu, inaczej: pole w macierzy problemu.
@@ -14,6 +15,7 @@ class Tile():
         self.workers_required = workers_required
         self.reward = reward
         # Jak przeszkadza pogoda
+        self.weather_affection = random.choice([1, 2, 4, 5])
 
 '''
 Klasa reprezentująca problem.
@@ -45,7 +47,7 @@ class Problem():
             self.matrix.append([])
             for j in range(size[1]):
                 workers_required = random.choice(range(our_workers, int(our_workers*1.5)))
-                reward = workers_required * random.choice(range(1, 1.5, 0.05)) 
+                reward = workers_required * random.choice(range(100, 150, 5)) / 100
                 # Koszt transportu jest proporcjonalny do odległości pola od lewego górnego rogu macierzy lasu.
                 self.matrix[i].append(Tile(transport_cost=50*(i+j+1), workers_required=workers_required, reward=reward))
             
@@ -53,7 +55,7 @@ class Problem():
 Klasa reprezentująca rozwiązanie.
 '''     
 class Solution():
-    def __init__(self, size: int, vector: list[tuple], problem: 'Problem'):
+    def __init__(self, vector: list[tuple], problem: 'Problem'):
         self.generation_size = len(vector)
         self.problem = problem
         self.vector = vector 
@@ -85,7 +87,58 @@ class Solution():
 
     def evaluate_function(self):
         j = 0
-        for x, y, i in zip(self.vector, range(len(self.vector))):
-            xy_tile = self.problem[x][y]
+        for xy, i in zip(self.vector, range(len(self.vector))):
+            x, y = xy
+            xy_tile = self.problem.matrix[x][y]
+            # Ilu wykorzystamy naszych pracowników
+            our_workers = min(self.problem.our_workers, xy_tile.workers_required)
+            # Ilu wykorzystamy pracowników klasy A
+            a_workers = min(xy_tile.workers_required % self.problem.our_workers, self.problem.a_workers) 
+            # Ilu wykorzystamy pracowników klasy B
+            b_workers = xy_tile.workers_required % (self.problem.our_workers + a_workers)
             
-            j += xy_tile.reward - xy_tile.transport_cost - self.problem.weather_prob(i)*self.problem.penalty - 
+            # Koszt poniesiony przy wypłatach
+            paid_wages = our_workers*self.problem.wage + a_workers*self.problem.a_wage + b_workers*self.problem.b_wage
+            
+            # Koszty poniesione z powodu warunków pogodowych 
+            w_cost = self.problem.weather_prob(i)*(self.problem.penalty+xy_tile.weather_affection)
+            
+            # Ostatecznie wyliczamy wartość funkcji celu
+            j += xy_tile.reward - xy_tile.transport_cost - w_cost - paid_wages
+            
+        return j
+    
+    # Metoda sprawdzająca czy rozwiązanie jest legalne - tj. czy spełnia warunki
+    # Naszym warunkiem jest: maksymalnie 2 sąsiadujące ze sobą pola (pionowo lub poziomo) mogą zostać ścięte.
+    def is_legal(self):
+        rows = defaultdict(list)
+        cols = defaultdict(list)
+        
+        for xy in self.vector:
+            rows[xy[0]].append(xy[1])
+            cols[xy[1]].append(xy[0])
+            
+        for x, ys in rows.items():
+            if len(ys) > 2:
+                if self._check_lines(ys):
+                    return False
+                
+        for y, xs in cols.items():
+            if len(xs) > 2:
+                if self._check_lines(xs):
+                    return False
+                
+        return True
+
+    # Funkcja sprawdzająca, czy w jednej lini znajdują się 3 sąsaidujące ze sobą pola
+    def _check_lines(self, ls: list[int]) -> bool:
+        ls.sort()
+        counter = 0
+        for i in range(1, len(ls)):
+            if ls[i] == ls[i-1] + 1:
+                counter += 1
+                if counter == 2:
+                    return True
+            else:
+                counter = 0
+        return False
