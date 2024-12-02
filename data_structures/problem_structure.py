@@ -13,6 +13,7 @@ class Tile():
         self.transport_cost = transport_cost
         self.workers_required = workers_required
         self.reward = reward
+        # Jak przeszkadza pogoda
 
 '''
 Klasa reprezentująca problem.
