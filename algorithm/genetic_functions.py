@@ -38,7 +38,7 @@ def permutation_mutation(sol: 'Solution') -> None:
     i = random.choice(range(sol.problem.n))
     
     # Zamieniamy wylosowany element z elementem z kolejnego etapu
-    # (Lub z etapu poprzedniego w szczególnym wypadku)
+    # (Lub z etapu poprzedniego w szczególnym wypadku).
     if i == sol.problem.n - 1:
         i_2 = i - 1
     else:
