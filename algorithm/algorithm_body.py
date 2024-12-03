@@ -39,6 +39,7 @@ class GeneticAlgorithm:
         population.sort(key=lambda x: x.fitness)
         population_len = len(population)
         i = 0
+        
         while True:
             selected = self.selection_model(population)
             new_population = selected.copy()
