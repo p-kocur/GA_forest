@@ -46,10 +46,130 @@ def permutation_mutation(sol: 'Solution') -> None:
     sol.vector[i], sol.vector[i_2] = sol.vector[i_2], sol.vector[i]
         
 
-def single_point_crossover(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
+
+# Deterministyczne krzyżowania
+# Kilka krzyżowań z prawdopodobieństwem
+# Dodanie do klasy solution
+# Dobór osobników do krzyżowania
+# Zastanowić się nad interfejsem
+
+def single_point_crossover(parent_1: 'Solution', parent_2: 'Solution', side: str = 'l') -> 'Solution':
     """
-    Wykonuje krzyżowanie jednopunktowe między dwoma rodzicami.
+    Wykonuje krzyżowanie jednopunktowe na reprezentacji macierzowej rodziców
     --------------------
+    Parameters
+    ---------- 
+    parent_1: Solution, rodzic 1
+    parent_2: Solution, rodzic 2
+    side: str, 'l' - macierz dzielona od: 'l' lewej, 'p' prawej, 'g' od góry, 'd' od dołu
+    return: Solution, child
+
+    Decyduje fitnes rodziców.
+    """
+    # Zamień rozwiązanie z reprezetnacji wektorowej na reprezentacje macierzową
+    parent_1_matrix = np.zeros([parent_1.size[0], parent_1.size[1]])
+    parent_1_matrix[parent_1] = 1
+
+    parent_2_matrix = np.zeros([parent_2.size[0], parent_2.size[1]])
+    parent_2_matrix[parent_2] = 1
+
+    # Przypisanie takich samych zmiennych jak rodzic_1 dla dziecka
+    child = parent_1
+
+    child_matrix = np.zeros([parent_1.size[0],parent_2.size[1]])
+
+    # Punkt podziału na podstawie wartosci fitnes rodziców 
+    split_point = max(parent_1.fitness, parent_2.fitness)/(parent_1+parent_2)
+
+    if parent_1.fitness > parent_2.fitness:
+        child_matrix = matrix_crossover(parent_1_matrix, parent_2_matrix, split_point, side)
+    else:
+        child_matrix = matrix_crossover(parent_2_matrix, parent_1_matrix, split_point, side)
+
+    child.vector = np.transpose(np.where(child_matrix))
+
+    return child
+
+def single_point_crossover_random(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
+    """
+    Wykonuje losowe krzyżowanie jednopunktowe na reprezentacji macierzowej rodziców
+    --------------------
+    Parameters
+    ---------- 
+    parent_1: Solution, rodzic 1
+    parent_2: Solution, rodzic 2
+    return: Solution, child
+
+    Decyduje losowo.
+    """
+
+    # Zamień rozwiązanie z reprezetnacji wektorowej na reprezentacje macierzową
+    parent_1_matrix = np.zeros([parent_1.size[0], parent_1.size[1]])
+    parent_1_matrix[parent_1] = 1
+
+    parent_2_matrix = np.zeros([parent_2.size[0], parent_2.size[1]])
+    parent_2_matrix[parent_2] = 1
+
+    # Przypisanie takich samych zmiennych jak rodzic_1 dla dziecka
+    child = parent_1
+
+    child_matrix = np.zeros([parent_1.size[0],parent_2.size[1]])
+
+    # Punkt podziału losowo 
+    split_point = np.random.randint(0, parent_1.size[0])
+    sides = ['l', 'p', 'd', 'g']
+
+    if parent_1.fitness > parent_2.fitness:
+        child_matrix = matrix_crossover(parent_1_matrix, parent_2_matrix, split_point, random.choice(sides))
+    else:
+        child_matrix = matrix_crossover(parent_2_matrix, parent_1_matrix, split_point, random.choice(sides))
+
+    child.vector = np.transpose(np.where(child_matrix))
+
+    return child
+
+
+def matrix_crossover(m1: np.array, m2: np.array, split_point, side:str = 'l') -> np.array:
+    """
+    Funkcja przeprowadzająca krzyżowanie jednopunktowe
+    """
+    m = np.zeros_like(m1)
+    
+    if side == 'l':
+        m[:split_point][:] = m1[:split_point][:] 
+        m[split_point:][:] = m2[split_point:][:]
+        return m
+    
+    if side == 'p':
+        m[split_point:][:] = m1[split_point:][:] 
+        m[:split_point][:] = m2[:split_point][:] 
+        return m
+
+    if side == 'g':
+        m[:][:split_point] = m1[:][:split_point] 
+        m[:][split_point:] = m2[:][split_point:] 
+        return m
+
+    if side == 'd':
+        m[:][split_point:] = m1[:][split_point:] 
+        m[:][:split_point] = m2[:][:split_point] 
+        return m
+
+    ValueError("Wrong side argument")
+
+
+
+
+def single_point_crossover_naive(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
+    """
+    Naiwne krzyżowanie jednopunktowe - operuje na wektorze solution
+    ----------
+    Parameters
+    ---------- 
+    parent_1: Solution, rodzic 1
+    parent_2: Solution, rodzic 2
+    return: Solution, child
+
     Schemat rozwiązania:
     Wybierz losowy indeks jako punkt krzyżowania, rozdziel w tym punkcie 
     obydwojga rodziców, połącz segmenty tworząc dziecko.
@@ -70,15 +190,17 @@ def single_point_crossover(parent_1: 'Solution', parent_2: 'Solution') -> 'Solut
 
     if not child.is_legal():
         # raise TimeoutError # Mozliwa alternatywa zamiast print'a
-        print("Uwaga! Nielegalne dziecko") # xD
+        print("Uwaga! Nielegalne dziecko")
+        child = parent_1
+
 
     return child
 
 
 
-def multi_point_crossover(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
+def multi_point_crossover_naive(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
     """
-    Wykonuje krzyżowanie wielopunktowe między dwoma rodzicami.
+    Wykonuje naiwne krzyżowanie wielopunktowe między dwoma rodzicami - operuje na wektorze solution.
     --------------------
     :param n_points - liczba punktów krzyżowania (domyślnie 2)
     """
@@ -115,13 +237,14 @@ def multi_point_crossover(parent_1: 'Solution', parent_2: 'Solution') -> 'Soluti
 
     if not child.is_legal():
         print("Uwaga! Nielegalne dziecko") 
+        child = parent_1
 
     return child
 
 
-def uniform_crossover(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
+def uniform_crossover_naive(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
     """
-    Wykonuje krzyżowanie jednolite
+    Wykonuje naiwne krzyżowanie jednolite - operuje na wektorze solution
     --------------------
     Dla każdego genu, wybiera losowo z parent_1 lub parent_2
     """
@@ -147,5 +270,10 @@ def uniform_crossover(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
 
     if not child.is_legal():
         print("Uwaga! Nielegalne dziecko")
+        child = parent_1
+
 
     return child
+
+
+
