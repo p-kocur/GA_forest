@@ -10,12 +10,7 @@ def stop_condition(i, max_iter):
 def first_population_generator(n, generation_size):
     '''Generowanie n macierzy wielkości [generation_size x generation_size]'''
 
-    return [Forrest(np.random.randint(0, 20, (generation_size, generation_size))) for _ in range(n)]
-
-    '''Generowanie n macierzy wielkości [generation_size x generation_size] z posortowanymi wartościami'''
-    # ordered_array = n * np.arange(1, generation_size*generation_size+1).reshape(generation_size, generation_size)
-    # print(ordered_array)
-    # return first_population
+    return [Solution(np.random.randint(0, 20, (generation_size, generation_size))) for _ in range(n)]
 
 
 
@@ -44,7 +39,7 @@ class GeneticAlgorithm:
             selected = self.selection_model(population)
             new_population = selected.copy()
             while len(new_population) != population_len:
-                child = choice(population).crossover(choice(population))
+                child = random.choice(population).crossover(random.choice(population))
                 if random() <= self.mutation_probability:
                     child.mutation()
                 new_population.append(child)

@@ -2,14 +2,16 @@ import numpy as np
 import random
 from collections import defaultdict
 
-'''
-Klasa reprezentująca część lasu, inaczej: pole w macierzy problemu.
-Jej pola to:
-self.transport_cost - koszt przetransportowania ściętego drewna do bazy ponoszony jednorazowo,
-self.workers_required - liczba pracowników potrzebna by ściąć wszystkie drzewa w punkcie,
-self.reward - cena całego drewna zebranego z pola.
-'''
 class Tile():
+    '''
+    Klasa reprezentująca część lasu, inaczej: pole w macierzy problemu.
+    ----------
+    Parametry
+    ---------- 
+    self.transport_cost: - koszt przetransportowania ściętego drewna do bazy ponoszony jednorazowo,
+    self.workers_required: - liczba pracowników potrzebna by ściąć wszystkie drzewa w punkcie,
+    self.reward: - cena całego drewna zebranego z pola.
+    '''
     def __init__(self, transport_cost: float, workers_required: int, reward: float):
         self.transport_cost = transport_cost
         self.workers_required = workers_required
@@ -17,22 +19,25 @@ class Tile():
         # Jak przeszkadza pogoda
         self.weather_affection = random.choice([1, 2, 4, 5])
 
-'''
-Klasa reprezentująca problem.
-Jej pola to:
-self.matrix - macierz, której każde pole jest instancją klasy Tile,
-self.n - liczba etapów problemu
-self.bad_weather_prob - rozkład prawdopodobieństwa wystąpienia złej pogody
-self.penalty - wartość dodatkowego kosztu spowodowanego warunkami pogodowymi
-self.our_workers - liczba "naszych" pracowników,
-self.a_workers - liczba pracowników z zewnątrz klasy A,
-self.b_workers - liczba pracowników z zewnątrz klasy B,
-self.wage - wypłata na dzień, jaką płacimy "naszemu" pracownikowi,
-self.a_wage - wypłata na dzień, jaką płacimy pracownikom z zewnątrz klasy A,
-self.b_wage - wypłata na dzień, jaką płacimy pracownikom z zewnątrz klasy B,
-'''
 class Problem():
+    '''
+    Klasa reprezentująca problem.
+    ----------
+    Parametry
+    ---------- 
+    self.matrix:  macierz, której każde pole jest instancją klasy Tile,
+    self.n:  liczba etapów problemu
+    self.bad_weather_prob:  rozkład prawdopodobieństwa wystąpienia złej pogody
+    self.penalty:  wartość dodatkowego kosztu spowodowanego warunkami pogodowymi
+    self.our_workers:  liczba "naszych" pracowników,
+    self.a_workers:  liczba pracowników z zewnątrz klasy A,
+    self.b_workers:  liczba pracowników z zewnątrz klasy B,
+    self.wage:  wypłata na dzień, jaką płacimy "naszemu" pracownikowi,
+    self.a_wage:  wypłata na dzień, jaką płacimy pracownikom z zewnątrz klasy A,
+    self.b_wage: wypłata na dzień, jaką płacimy pracownikom z zewnątrz klasy B,
+    '''
     def __init__(self, size: tuple[int], n: int, wage: float, our_workers: int, weather_prob: callable, penalty: float):
+
         self.n = n
         self.size = size
         self.weather_prob = weather_prob
@@ -52,16 +57,24 @@ class Problem():
                 # Koszt transportu jest proporcjonalny do odległości pola od lewego górnego rogu macierzy lasu.
                 self.matrix[i].append(Tile(transport_cost=50*(i+j+1), workers_required=workers_required, reward=reward))
             
-'''
-Klasa reprezentująca rozwiązanie.
-'''     
+            
+  
 class Solution():
-    def __init__(self, vector: list[tuple], problem: 'Problem',  crossover_strategy: callable = None):
+    '''
+    Klasa reprezentująca rozwiązanie.
+    ----------
+    Parametry
+    ---------- 
+    self.vector: wektor z rozwiązaniami,
+    self.problem: problem który rozwiązujemy
+    self.crossover_strategy: metoda krzyzowania
+    '''   
+    def __init__(self, vector: list[tuple], problem: 'Problem',  crossover_strategies: Union[int|list]):
         self.size = len(vector)
         self.problem = problem
         self.vector = vector 
         self.fitness = self.evaluate_function()
-        self.crossover_strategy = crossover_strategy
+        self.crossover_strategies = crossover_strategies
 
     def mutation(self):
         self._perform_mutation()
@@ -69,27 +82,25 @@ class Solution():
 
     def _perform_mutation(self):
         '''
-        Choose two random indices and swap their respective values
+        # TODO Wykorzystanie funkcji z genetic_functions
         '''
-        
-        source_index = (np.random.randint(0, self.size))
 
-        while True:
-            target_index = (np.random.randint(0, self.size))
-            if target_index != source_index:
-                break
-
-        self.matrix[source_index], self.matrix[target_index] = (
-            self.matrix[target_index],
-            self.matrix[source_index],
-        )
 
     def crossover(self, solution2: 'Solution' ) -> 'Solution':
-        if self.crossover_strategy is None:
-            raise ValueError("Strategia krzyżowania nie została zdefiniowana.")
-        
-        return self.crossover_strategy(self, solution2)
+        """
+        # TODO Wykorzystanie funkcji z genetic_functions
+        # TODO Wybór z dostepnych metod krzyżowania (losowy/deterministyczny) 
+        """
+        self._perform_crossover(solution2)
 
+    def _perform_crossover(self, solution2: 'Solution') -> 'Solution':
+        """
+        # TODO Jak przekazywać wybór dodatkowych parametrów do funkcji krzyzowania np. single_point_crossover
+        # może otrzymywać 'strone' z której dzielimy  
+        """
+        single_point_crossover(self, solution2)
+
+ 
     def evaluate_function(self):
         j = 0
         for xy, i in zip(self.vector, range(len(self.vector))):
@@ -113,9 +124,13 @@ class Solution():
             
         return j
     
-    # Metoda sprawdzająca czy rozwiązanie jest legalne - tj. czy spełnia warunki
-    # Naszym warunkiem jest: maksymalnie 2 sąsiadujące ze sobą pola (pionowo lub poziomo) mogą zostać ścięte.
+    
     def is_legal(self):
+        """
+        Metoda sprawdzająca czy rozwiązanie jest legalne - tj. czy spełnia warunki
+        Naszym warunkiem jest: maksymalnie 2 sąsiadujące ze sobą pola (pionowo lub poziomo) mogą zostać ścięte.
+        """
+
         rows = defaultdict(list)
         cols = defaultdict(list)
         
@@ -135,8 +150,11 @@ class Solution():
                 
         return True
 
-    # Funkcja sprawdzająca, czy w jednej lini znajdują się 3 sąsaidujące ze sobą pola
     def _check_lines(self, ls: list[int]) -> bool:
+        """
+        Funkcja sprawdzająca, czy w jednej lini znajdują się 3 sąsaidujące ze sobą pola
+        """
+
         ls.sort()
         counter = 0
         for i in range(1, len(ls)):
