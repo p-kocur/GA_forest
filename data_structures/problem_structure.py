@@ -1,6 +1,7 @@
 import numpy as np
 import random
 from collections import defaultdict
+from typing import Union
 
 class Tile():
     '''
@@ -67,14 +68,16 @@ class Solution():
     ---------- 
     self.vector: wektor z rozwiązaniami,
     self.problem: problem który rozwiązujemy
-    self.crossover_strategy: metoda krzyzowania
+    self.crossover_strategies: lista krotek zawierających funkcje i prawdopodobieństwo ich użycia. Prawdopodobieństwa muszą sumować się do 1.
+    self.mutation_strategies: analogicznie jak z krzyżowaniami.
     '''   
-    def __init__(self, vector: list[tuple], problem: 'Problem',  crossover_strategies: Union[int|list]):
+    def __init__(self, vector: list[tuple], problem: 'Problem',  crossover_strategies: list[tuple], mutation_strategies: list[tuple]):
         self.size = len(vector)
         self.problem = problem
         self.vector = vector 
         self.fitness = self.evaluate_function()
-        self.crossover_strategies = crossover_strategies
+        self.crossover_functions, self.crossover_probs = map(list, zip(*crossover_strategies))
+        self.mutation_functions, self.mutation_probs = map(list, zip(*mutation_strategies))
 
     def mutation(self):
         self._perform_mutation()
@@ -83,7 +86,11 @@ class Solution():
     def _perform_mutation(self):
         '''
         # TODO Wykorzystanie funkcji z genetic_functions
-        '''
+        ''' 
+        mutation_function = random.choice(self.mutation_functions, 1, p=self.mutation_probs)
+        mutation_function(self)
+        while not self.is_legal():
+            mutation_function(self)
 
 
     def crossover(self, solution2: 'Solution' ) -> 'Solution':
@@ -98,9 +105,12 @@ class Solution():
         # TODO Jak przekazywać wybór dodatkowych parametrów do funkcji krzyzowania np. single_point_crossover
         # może otrzymywać 'strone' z której dzielimy  
         """
-        single_point_crossover(self, solution2)
+        crossover_function = random.choice(self.crossover_functions, 1, p=self.crossover_probs)
+        child = crossover_function(self, solution2)
+        while not child.is_legal():
+            child.mutation()
+        return child
 
- 
     def evaluate_function(self):
         j = 0
         for xy, i in zip(self.vector, range(len(self.vector))):

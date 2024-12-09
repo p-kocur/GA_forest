@@ -3,9 +3,15 @@ import random
 
 from data_structures.problem_structure import Solution, Problem, Tile
 
-def basic_mutation(sol: 'Solution') -> None:
-    # Losowo wybieramy element rozwiązania
-    i = random.choice(range(sol.problem.n))
+'''
+Zamienia element rozwiązania z losowym elementem macierzy problemu
+'''
+def basic_mutation(sol: 'Solution', index=None) -> None:
+    # Losowo wybieramy element rozwiązania chyba, że przekazano index
+    if index is None:
+        i = random.choice(range(sol.problem.n))
+    else:
+        i = index
     
     # Losowo wybieramy nowe koordynaty wylosowanego elementu rozwiązania
     possible_x = range(sol.problem.size[0])
@@ -18,7 +24,10 @@ def basic_mutation(sol: 'Solution') -> None:
         if (x, y) not in sol.vector:
             sol.vector[i] = (x, y)
             return
-        
+
+'''
+Zamienia element rozwiązania na element sąsiadujący z nim w macierzy
+'''         
 def territorial_mutation(sol: 'Solution') -> None:
     # Dopóki nie odnaleźliśmy niezajętego pola
     while True:
@@ -32,19 +41,66 @@ def territorial_mutation(sol: 'Solution') -> None:
         if (new_x, new_y) not in sol.vector:
             sol.vector[i] = (new_x, new_y)
             return
-        
+
+'''
+Zamienia element rozwiązania z etapu i z rozwiązaniem z etapu i+1 (lub i-1)
+'''  
 def permutation_mutation(sol: 'Solution') -> None:
     # Losowo wybieramy element rozwiązania
     i = random.choice(range(sol.problem.n))
     
     # Zamieniamy wylosowany element z elementem z kolejnego etapu
-    # (Lub z etapu poprzedniego w szczególnym wypadku).
+    # (Lub z etapu poprzedniego w szczególnym przypadku).
     if i == sol.problem.n - 1:
         i_2 = i - 1
     else:
         i_2 = i + 1  
     sol.vector[i], sol.vector[i_2] = sol.vector[i_2], sol.vector[i]
-        
+  
+'''
+Odrzuca element rozwiązania o najmniejszej różnicy wartości nagody z kosztem transportu
+'''  
+def max_reward_mutation(sol: 'Solution') -> None:
+    min_reward = np.inf
+    min_element_i = None
+    for i in range(len(sol.vector)):
+        x, y = sol.vector[i]
+        value = sol.problem.matrix[x][y].reward - sol.problem.matrix[x][y].transport_cost
+        if value < min_reward:
+            min_reward, min_element_i = value, i
+    
+    basic_mutation(sol, min_element_i)
+    
+'''
+Zamienia element rozwiązania z elementem macierzy lężącym w obszarze, gdzie nie leży żaden element rozwiązania.
+Znajduje pole macierzy najbardziej oddalone od obecnych rozwiązań i dodaje je do obecnego wektora rozwiązań.
+'''
+def expansion_mutation(sol: 'Solution') -> None:
+    xs, ys = map(list, zip(*sol.vector))
+    xs.extend([0, sol.problem.size[0]-1])
+    ys.extend([0, sol.problem.size[1]-1])
+    xs.sort()
+    ys.sort()
+    
+    max_d_x = 0
+    new_x = None
+    for i in range(len(xs)-1):
+       d_x = xs[i+1] - xs[i] 
+       if d_x > max_d_x:
+           max_d_x, new_x = d_x, xs[i] + (xs[i+1] - xs[i])//2
+           
+    max_d_y = 0
+    new_y = None
+    for i in range(len(ys)-1):
+       d_y = ys[i+1] - ys[i] 
+       if d_y > max_d_y:
+           max_d_y, new_y = d_y, ys[i] + (ys[i+1] - ys[i])//2
+           
+    
+    if (new_x, new_y) not in sol.vector:
+        i = random.choice(range(sol.problem.n))
+        sol.vector[i] = (new_x, new_y)
+
 
 
 # Deterministyczne krzyżowania
