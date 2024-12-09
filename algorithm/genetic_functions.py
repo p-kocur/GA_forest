@@ -107,7 +107,7 @@ def single_point_crossover_random(parent_1: 'Solution', parent_2: 'Solution') ->
     """
     Wykonuje losowe krzyżowanie jednopunktowe na reprezentacji macierzowej rodziców
     --------------------
-    Parameters
+    Parametry
     ---------- 
     parent_1: Solution, rodzic 1
     parent_2: Solution, rodzic 2
@@ -183,7 +183,7 @@ def single_point_crossover_vector(parent_1: 'Solution', parent_2: 'Solution') ->
     """
     Naiwne krzyżowanie jednopunktowe - operuje na wektorze solution
     ----------
-    Parameters
+    Parametry
     ---------- 
     parent_1: Solution, rodzic 1
     parent_2: Solution, rodzic 2
@@ -291,4 +291,131 @@ def naive_legitemacy(child: Solution, parent_1: Solution, parent_2: Solution, ma
 
 
 
+def roulette_selection(population: list, percentage: int = 50) -> list:
+    """
+    Ruletka - przeprowadzony na calej populacji; zostaje procent oryginalnej populacji
+    # TODO jezeli fitnes bedzie roznych znakow (lub bedzie ujemny) funkcja sie psuje 
+    """
+    
+    num_select = int(len(population)*(percentage/100))
 
+    population.sort()
+    next_population = []
+    total_fitness = sum(solution.fitness for solution in population)
+
+    cumulative_fitness = []
+    c_fitness = 0
+
+    for solution in population:
+        c_fitness += solution.fitness
+        cumulative_fitness.append(c_fitness)
+
+    for _ in range(0, num_select):
+
+        selection_point = random.uniform(0, total_fitness)
+
+        for index, c_fit in enumerate(cumulative_fitness):
+            if c_fit >= selection_point:
+                next_population.append(population[index])
+                for i in range(index+1, len(population)):
+                    cumulative_fitness[i] -= population[index].fitness
+                break
+            
+        population.pop(index)
+        cumulative_fitness.pop(index)
+
+    return next_population
+
+def elitist_roulette_selection(population: list, percentage: int = 50) -> list:
+    """
+    # TODO jezeli fitnes bedzie roznych znakow (lub bedzie ujemny) funkcja sie psuje 
+    """
+    
+    elite_num = int(len(population)*(percentage/100))
+
+    next_population = []
+
+    population.sort()
+
+    next_population = population[:elite_num]
+
+    population = population[elite_num:]
+
+    num_select = int(len(population)*(percentage/100))
+
+    population.sort()
+    next_population = []
+    total_fitness = sum(solution.fitness for solution in population)
+
+    cumulative_fitness = []
+    c_fitness = 0
+
+    for solution in population:
+        c_fitness += solution.fitness
+        cumulative_fitness.append(c_fitness)
+
+    for _ in range(0, num_select):
+
+        selection_point = random.uniform(0, total_fitness)
+
+        for index, c_fit in enumerate(cumulative_fitness):
+            if c_fit >= selection_point:
+                next_population.append(population[index])
+                for i in range(index+1, len(population)):
+                    cumulative_fitness[i] -= population[index].fitness
+                break
+            
+        population.pop(index)
+        cumulative_fitness.pop(index)
+
+    return next_population
+
+
+def tournament_selection(population: list, percentage: int = 50) -> list:
+    """
+    Rankingowy - przeprowadzony na calej populacji; zostaje procent oryginalnej populacji
+    """
+
+
+    num_select = int(len(population)*(percentage/100))
+
+    next_population = []
+
+    for _ in range(0, num_select):
+        idx_1, idx_2 = random.sample(range(len(population)), 2)
+        if population[idx_1].fitness >= population[idx_2].fitness:
+            next_population.append(population[idx_1])
+            population.pop(idx_1)
+        else:
+            next_population.append(population[idx_2])
+            population.pop(idx_2)
+
+    return next_population
+
+
+def elitist_tournament_selection(population: list, percentage: int = 50, elite: int = 20) -> list:
+    """
+    Rankingowy - przeprowadzony na calej populacji; zostaje procent oryginalnej (populacji-elita) z turnieju oraz procent oryginalnej który jest elitą
+    """
+    elite_num = int(len(population)*(percentage/100))
+
+    next_population = []
+
+    population.sort()
+
+    next_population = population[:elite_num]
+
+    population = population[elite_num:]
+
+    num_select = int(len(population)*(percentage/100))
+
+    for _ in range(num_select):
+        idx_1, idx_2 = random.sample(range(len(population)), 2)
+        if population[idx_1].fitness >= population[idx_2].fitness:
+            next_population.append(population[idx_1])
+            population.pop(idx_1)
+        else:
+            next_population.append(population[idx_2])
+            population.pop(idx_2)
+
+    return next_population
