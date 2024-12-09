@@ -103,49 +103,6 @@ def expansion_mutation(sol: 'Solution') -> None:
 
 
 
-# Deterministyczne krzyżowania
-# Kilka krzyżowań z prawdopodobieństwem
-# Dodanie do klasy solution
-# Dobór osobników do krzyżowania
-# Zastanowić się nad interfejsem
-
-def single_point_crossover(parent_1: 'Solution', parent_2: 'Solution', side: str = 'l') -> 'Solution':
-    """
-    Wykonuje krzyżowanie jednopunktowe na reprezentacji macierzowej rodziców
-    --------------------
-    Parameters
-    ---------- 
-    parent_1: Solution, rodzic 1
-    parent_2: Solution, rodzic 2
-    side: str, 'l' - macierz dzielona od: 'l' lewej, 'p' prawej, 'g' od góry, 'd' od dołu
-    return: Solution, child
-
-    Decyduje fitnes rodziców.
-    """
-    # Zamień rozwiązanie z reprezetnacji wektorowej na reprezentacje macierzową
-    parent_1_matrix = np.zeros([parent_1.size[0], parent_1.size[1]])
-    parent_1_matrix[parent_1] = 1
-
-    parent_2_matrix = np.zeros([parent_2.size[0], parent_2.size[1]])
-    parent_2_matrix[parent_2] = 1
-
-    # Przypisanie takich samych zmiennych jak rodzic_1 dla dziecka
-    child = parent_1
-
-    child_matrix = np.zeros([parent_1.size[0],parent_2.size[1]])
-
-    # Punkt podziału na podstawie wartosci fitnes rodziców 
-    split_point = max(parent_1.fitness, parent_2.fitness)/(parent_1+parent_2)
-
-    if parent_1.fitness > parent_2.fitness:
-        child_matrix = matrix_crossover(parent_1_matrix, parent_2_matrix, split_point, side)
-    else:
-        child_matrix = matrix_crossover(parent_2_matrix, parent_1_matrix, split_point, side)
-
-    child.vector = np.transpose(np.where(child_matrix))
-
-    return child
-
 def single_point_crossover_random(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
     """
     Wykonuje losowe krzyżowanie jednopunktowe na reprezentacji macierzowej rodziców
@@ -158,34 +115,40 @@ def single_point_crossover_random(parent_1: 'Solution', parent_2: 'Solution') ->
 
     Decyduje losowo.
     """
+    problem_size = parent_1.problem.size
 
-    # Zamień rozwiązanie z reprezetnacji wektorowej na reprezentacje macierzową
-    parent_1_matrix = np.zeros([parent_1.size[0], parent_1.size[1]])
-    parent_1_matrix[parent_1] = 1
+    parent_1_matrix = np.zeros(problem_size)
+    for coord in parent_1.vector:
+        parent_1_matrix[coord] = 1
 
-    parent_2_matrix = np.zeros([parent_2.size[0], parent_2.size[1]])
-    parent_2_matrix[parent_2] = 1
+    parent_2_matrix = np.zeros(problem_size)
+    for coord in parent_2.vector:
+        parent_2_matrix[coord] = 1
 
-    # Przypisanie takich samych zmiennych jak rodzic_1 dla dziecka
-    child = parent_1
-
-    child_matrix = np.zeros([parent_1.size[0],parent_2.size[1]])
-
-    # Punkt podziału losowo 
-    split_point = np.random.randint(0, parent_1.size[0])
+    child = Solution([(0,0)], parent_1.problem)
+    
     sides = ['l', 'p', 'd', 'g']
+    side = random.choice(sides)
+    split_point = np.random.randint(0, problem_size[0])
+    
+    print(f"Split point: {split_point}, Side: {side}")
 
     if parent_1.fitness > parent_2.fitness:
-        child_matrix = matrix_crossover(parent_1_matrix, parent_2_matrix, split_point, random.choice(sides))
+        child_matrix = single_point_matrix_crossover(parent_1_matrix, parent_2_matrix, split_point, random.choice(sides))
     else:
-        child_matrix = matrix_crossover(parent_2_matrix, parent_1_matrix, split_point, random.choice(sides))
+        child_matrix = single_point_matrix_crossover(parent_2_matrix, parent_1_matrix, split_point, random.choice(sides))
 
-    child.vector = np.transpose(np.where(child_matrix))
+    vector = np.transpose(np.nonzero(child_matrix))
+    child.vector = [tuple(coord) for coord in vector]
+
+    child = naive_legitemacy(child, parent_1, parent_2)
+
+    child.evaluate_function()
 
     return child
 
 
-def matrix_crossover(m1: np.array, m2: np.array, split_point, side:str = 'l') -> np.array:
+def single_point_matrix_crossover(m1: np.array, m2: np.array, split_point, side:str = 'l') -> np.array:
     """
     Funkcja przeprowadzająca krzyżowanie jednopunktowe
     """
@@ -216,7 +179,7 @@ def matrix_crossover(m1: np.array, m2: np.array, split_point, side:str = 'l') ->
 
 
 
-def single_point_crossover_naive(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
+def single_point_crossover_vector(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
     """
     Naiwne krzyżowanie jednopunktowe - operuje na wektorze solution
     ----------
@@ -230,48 +193,43 @@ def single_point_crossover_naive(parent_1: 'Solution', parent_2: 'Solution') -> 
     Wybierz losowy indeks jako punkt krzyżowania, rozdziel w tym punkcie 
     obydwojga rodziców, połącz segmenty tworząc dziecko.
     """
-    # TODO - sprawdzenie czy rodzice mogą się krzyżować
+    first_is_parent_1 = np.random.random() < 0.5
 
-    crossover_point = np.random.randint(1, parent_1.size) 
-    child_vector = parent_1.vector[:crossover_point] + parent_2.vector[crossover_point:]
+    smaller_size = min(len(parent_1.vector), len(parent_2.vector))
+    crossover_point = np.random.randint(1, smaller_size)
+
+    if first_is_parent_1:
+        child_vector = (
+            parent_1.vector[:crossover_point] +
+            parent_2.vector[crossover_point:len(parent_2.vector)]
+        )
+    else:
+        child_vector = (
+            parent_2.vector[:crossover_point] +
+            parent_1.vector[crossover_point:len(parent_1.vector)]
+        )
+
     child = Solution(vector=child_vector, problem=parent_1.problem)
 
-    # TODO - Zapewnienie czy dziecko jest legalne, rozwiązanie na teraz: dziecko nielegalne -> przeprowadzamy mutacje 
-    max_retries = 10
-    retries = 0
-
-    while not child.is_legal() and retries < max_retries:
-        child._perform_mutation()
-        retries += 1
-
-    if not child.is_legal():
-        # raise TimeoutError # Mozliwa alternatywa zamiast print'a
-        print("Uwaga! Nielegalne dziecko")
-        child = parent_1
-
+    child = naive_legitemacy(child, parent_1, parent_2)
 
     return child
 
 
 
-def multi_point_crossover_naive(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
+def multi_point_crossover_vector(parent_1: 'Solution', parent_2: 'Solution', n_points=2) -> 'Solution':
     """
     Wykonuje naiwne krzyżowanie wielopunktowe między dwoma rodzicami - operuje na wektorze solution.
     --------------------
     :param n_points - liczba punktów krzyżowania (domyślnie 2)
     """
-    # TODO - sprawdzenie czy rodzice mogą się krzyżować
-    # TODO - zmiana w solution tak aby ilość punktów mogła być różna od 2  
-    
-    n_points = 2
+    smaller_size = min(len(parent_1.vector), len(parent_2.vector))
+    crossover_points = sorted(np.random.choice(range(1, smaller_size), size=n_points, replace=False))
 
-    crossover_points = sorted(np.random.choice(range(1, len(parent_1.size)), size=n_points, replace=False))
-
-    # Krzyżowanie genomu naprzemienie między rodzicami
-    # TODO -  początek zawsze z parent_1
+    start_with_parent_1 = np.random.random() < 0.5
 
     child_vector = []
-    current_parent = parent_1.vector
+    current_parent = parent_1.vector if start_with_parent_1 else parent_2.vector
     last_point = 0
 
     for point in crossover_points:
@@ -280,20 +238,10 @@ def multi_point_crossover_naive(parent_1: 'Solution', parent_2: 'Solution') -> '
         last_point = point
 
     child_vector.extend(current_parent[last_point:])
-    
+
     child = Solution(vector=child_vector, problem=parent_1.problem)
 
-    # TODO - Zapewnienie czy dziecko jest legalne, rozwiązanie na teraz: dziecko nielegalne -> przeprowadzamy mutacje 
-    max_retries = 10
-    retries = 0
-
-    while not child.is_legal() and retries < max_retries:
-        child._perform_mutation()
-        retries += 1
-
-    if not child.is_legal():
-        print("Uwaga! Nielegalne dziecko") 
-        child = parent_1
+    child = naive_legitemacy(child, parent_1, parent_2)
 
     return child
 
@@ -305,31 +253,42 @@ def uniform_crossover_naive(parent_1: 'Solution', parent_2: 'Solution') -> 'Solu
     Dla każdego genu, wybiera losowo z parent_1 lub parent_2
     """
 
+    smaller_size = min(len(parent_1.vector), len(parent_2.vector))
     vector_1 = parent_1.vector
     vector_2 = parent_2.vector
-    child_vector = []
 
     child_vector = [
         vector_1[i] if np.random.rand() < 0.5 else vector_2[i]
-        for i in range(len(vector_1))
+        for i in range(smaller_size)
     ]
 
     child = Solution(vector=child_vector, problem=parent_1.problem)
-
-    # TODO - Zapewnienie czy dziecko jest legalne, rozwiązanie na teraz: dziecko nielegalne -> przeprowadzamy mutacje 
-    max_retries = 10
-    retries = 0
-
-    while not child.is_legal() and retries < max_retries:
-        child._perform_mutation()
-        retries += 1
-
-    if not child.is_legal():
-        print("Uwaga! Nielegalne dziecko")
-        child = parent_1
-
+    
+    child = naive_legitemacy(child, parent_1, parent_2)
 
     return child
+
+
+def naive_legitemacy(child: Solution, parent_1: Solution, parent_2: Solution, max_retries: int = 10) -> Solution:
+    """
+    Naiwna próba naprawienia dziecka poprzez przeprowadzenie mutacji.
+    """
+    if child.is_legal():
+        return child
+
+    for _ in range(max_retries):
+        if child.is_legal():
+            break
+        child._perform_mutation()
+
+    if not child.is_legal():
+        child_vector = (
+            parent_1.vector.copy() if parent_1.fitness > parent_2.fitness else parent_2.vector.copy()
+        )
+        child = Solution(vector=child_vector, problem=parent_1.problem)
+
+    return child
+
 
 
 
