@@ -102,6 +102,11 @@ def expansion_mutation(sol: 'Solution') -> None:
         sol.vector[i] = (new_x, new_y)
 
 
+"""
+------------------------
+Krzyżowanie
+------------------------
+"""
 
 def single_point_crossover_random(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
     """
@@ -269,26 +274,11 @@ def uniform_crossover_naive(parent_1: 'Solution', parent_2: 'Solution') -> 'Solu
     return child
 
 
-def naive_legitemacy(child: Solution, parent_1: Solution, parent_2: Solution, max_retries: int = 10) -> Solution:
-    """
-    Naiwna próba naprawienia dziecka poprzez przeprowadzenie mutacji.
-    """
-    if child.is_legal():
-        return child
-
-    for _ in range(max_retries):
-        if child.is_legal():
-            break
-        child._perform_mutation()
-
-    if not child.is_legal():
-        child_vector = (
-            parent_1.vector.copy() if parent_1.fitness > parent_2.fitness else parent_2.vector.copy()
-        )
-        child = Solution(vector=child_vector, problem=parent_1.problem)
-
-    return child
-
+"""
+------------------------
+Selekcja
+------------------------
+"""
 
 
 def roulette_selection(population: list, percentage: int = 50) -> list:
@@ -419,3 +409,39 @@ def elitist_tournament_selection(population: list, percentage: int = 50, elite: 
             population.pop(idx_2)
 
     return next_population
+
+"""
+------------------------
+Inne
+------------------------
+"""
+
+
+def naive_legitemacy(child: Solution, parent_1: Solution, parent_2: Solution, max_retries: int = 10) -> Solution:
+    """
+    Naiwna próba naprawienia dziecka poprzez przeprowadzenie mutacji.
+    """
+    # Sprawdz czy wektor dziecka zawiera takie same wartości 
+    if len(child.vector) != len(set(child.vector)):    
+        # Dobierz losowo z parent_1/2 aby uzupelnic 
+        nd_vector = set(child.vector)
+        no_duplicates = set(child.vector + parent_1.vector + parent_2.vector)
+        child.vector = nd_vector + random.sample(no_duplicates, (len(child.vecotr)- len(nd_vector)))
+        child.evaluate_function()
+
+
+    if child.is_legal():
+        return child
+
+    for _ in range(max_retries):
+        if child.is_legal():
+            break
+        child._perform_mutation()
+
+    if not child.is_legal():
+        child_vector = (
+            parent_1.vector.copy() if parent_1.fitness > parent_2.fitness else parent_2.vector.copy()
+        )
+        child = Solution(vector=child_vector, problem=parent_1.problem)
+
+    return child
