@@ -37,7 +37,7 @@ class Problem():
     self.a_wage:  wypłata na dzień, jaką płacimy pracownikom z zewnątrz klasy A,
     self.b_wage: wypłata na dzień, jaką płacimy pracownikom z zewnątrz klasy B,
     '''
-    def __init__(self, size: tuple[int], n: int, wage: float, our_workers: int, weather_prob: callable, penalty: float):
+    def __init__(self, size: tuple[int], n: int, wage: float, our_workers: int, weather_prob: callable, penalty: float, mutation_options: list):
 
         self.n = n
         self.size = size
@@ -49,7 +49,9 @@ class Problem():
         self.b_wage = wage*1.6
         self.a_workers = int(our_workers * 0.3)
         self.b_workers = int(our_workers * 0.2)
+
         self.matrix = []
+
         for i in range(size[0]):
             self.matrix.append([])
             for j in range(size[1]):
@@ -71,13 +73,13 @@ class Solution():
     self.crossover_strategies: lista krotek zawierających funkcje i prawdopodobieństwo ich użycia. Prawdopodobieństwa muszą sumować się do 1.
     self.mutation_strategies: analogicznie jak z krzyżowaniami.
     '''   
-    def __init__(self, vector: list[tuple], problem: 'Problem',  crossover_strategies: list[tuple], mutation_strategies: list[tuple]):
+    def __init__(self, vector: list[tuple], problem: 'Problem', mutation_strategies: list[tuple]):
         self.size = len(vector)
         self.problem = problem
         self.vector = vector 
         self.fitness = self.evaluate_function()
-        self.crossover_functions, self.crossover_probs = map(list, zip(*crossover_strategies))
-        self.mutation_functions, self.mutation_probs = map(list, zip(*mutation_strategies))
+        # self.crossover_functions, self.crossover_probs = map(list, zip(*crossover_strategies))
+        # self.mutation_functions, self.mutation_probs = map(list, zip(*mutation_strategies))
 
     def mutation(self):
         self._perform_mutation()
@@ -93,23 +95,23 @@ class Solution():
             mutation_function(self)
 
 
-    def crossover(self, solution2: 'Solution' ) -> 'Solution':
-        """
-        # TODO Wykorzystanie funkcji z genetic_functions
-        # TODO Wybór z dostepnych metod krzyżowania (losowy/deterministyczny) 
-        """
-        self._perform_crossover(solution2)
+    # def crossover(self, solution2: 'Solution' ) -> 'Solution':
+    #     """
+    #     # TODO Wykorzystanie funkcji z genetic_functions
+    #     # TODO Wybór z dostepnych metod krzyżowania (losowy/deterministyczny) 
+    #     """
+    #     self._perform_crossover(solution2)
 
-    def _perform_crossover(self, solution2: 'Solution') -> 'Solution':
-        """
-        # TODO Jak przekazywać wybór dodatkowych parametrów do funkcji krzyzowania np. single_point_crossover
-        # może otrzymywać 'strone' z której dzielimy  
-        """
-        crossover_function = random.choice(self.crossover_functions, 1, p=self.crossover_probs)
-        child = crossover_function(self, solution2)
-        while not child.is_legal():
-            child.mutation()
-        return child
+    # def _perform_crossover(self, solution2: 'Solution') -> 'Solution':
+    #     """
+    #     # TODO Jak przekazywać wybór dodatkowych parametrów do funkcji krzyzowania np. single_point_crossover
+    #     # może otrzymywać 'strone' z której dzielimy  
+    #     """
+    #     crossover_function = random.choice(self.crossover_functions, 1, p=self.crossover_probs)
+    #     child = crossover_function(self, solution2)
+    #     while not child.is_legal():
+    #         child.mutation()
+    #     return child
 
     def evaluate_function(self):
         j = 0
