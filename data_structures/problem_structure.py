@@ -19,7 +19,7 @@ class Tile():
         self.reward = reward
         # Jak przeszkadza pogoda
         self.weather_affection = random.choice([1, 2, 4, 5])
-
+ 
 class Problem():
     '''
     Klasa reprezentująca problem.
@@ -36,8 +36,10 @@ class Problem():
     self.wage:  wypłata na dzień, jaką płacimy "naszemu" pracownikowi,
     self.a_wage:  wypłata na dzień, jaką płacimy pracownikom z zewnątrz klasy A,
     self.b_wage: wypłata na dzień, jaką płacimy pracownikom z zewnątrz klasy B,
+    self.mutation_functions: lista funkcji mutacji,
+    self.mutation_probs: lista prawdopodobieństw wyboru funkcji mutacji.
     '''
-    def __init__(self, size: tuple[int], n: int, wage: float, our_workers: int, weather_prob: callable, penalty: float, mutation_options: list):
+    def __init__(self, mutation_functions: list, mutation_probs: list, basic_mutation: callable, mutate_to_legal: callable, size: tuple[int] = (30, 30), n: int = 40, wage: float = 600, our_workers: int = 50, weather_prob: callable = lambda i: i * 1/20, penalty: float = 5000):
 
         self.n = n
         self.size = size
@@ -49,6 +51,10 @@ class Problem():
         self.b_wage = wage*1.6
         self.a_workers = int(our_workers * 0.3)
         self.b_workers = int(our_workers * 0.2)
+        self.mutation_functions = mutation_functions
+        self.mutation_probs = mutation_probs
+        self.basic_mutation = basic_mutation
+        self.mutate_to_legal = mutate_to_legal
 
         self.matrix = []
 
@@ -56,7 +62,7 @@ class Problem():
             self.matrix.append([])
             for j in range(size[1]):
                 workers_required = random.choice(range(our_workers, int(our_workers*1.5)))
-                reward = workers_required * random.choice(range(100, 150, 5)) / 100
+                reward = workers_required * random.choice(range(600, 750, 10))
                 # Koszt transportu jest proporcjonalny do odległości pola od lewego górnego rogu macierzy lasu.
                 self.matrix[i].append(Tile(transport_cost=50*(i+j+1), workers_required=workers_required, reward=reward))
             
@@ -70,10 +76,8 @@ class Solution():
     ---------- 
     self.vector: wektor z rozwiązaniami,
     self.problem: problem który rozwiązujemy
-    self.crossover_strategies: lista krotek zawierających funkcje i prawdopodobieństwo ich użycia. Prawdopodobieństwa muszą sumować się do 1.
-    self.mutation_strategies: analogicznie jak z krzyżowaniami.
     '''   
-    def __init__(self, vector: list[tuple], problem: 'Problem', mutation_strategies: list[tuple]):
+    def __init__(self, vector: list[tuple], problem: 'Problem'):
         self.size = len(vector)
         self.problem = problem
         self.vector = vector 
@@ -83,16 +87,17 @@ class Solution():
 
     def mutation(self):
         self._perform_mutation()
-        self.fitness = self.evaluate_function()
 
     def _perform_mutation(self):
-        '''
-        # TODO Wykorzystanie funkcji z genetic_functions
-        ''' 
-        mutation_function = random.choice(self.mutation_functions, 1, p=self.mutation_probs)
+        mutation_function = random.choices(self.problem.mutation_functions, weights=self.problem.mutation_probs, k=1)[0]
         mutation_function(self)
+        
+        counter = 0
         while not self.is_legal():
-            mutation_function(self)
+            if counter < 50:
+                self.problem.basic_mutation(self)
+            else:
+                self.problem.mutate_to_legal(self)
 
 
     # def crossover(self, solution2: 'Solution' ) -> 'Solution':
@@ -134,6 +139,7 @@ class Solution():
             # Ostatecznie wyliczamy wartość funkcji celu
             j += xy_tile.reward - xy_tile.transport_cost - w_cost - paid_wages
             
+        self.fitness = j
         return j
     
     
@@ -167,7 +173,7 @@ class Solution():
         Funkcja sprawdzająca, czy w jednej lini znajdują się 3 sąsaidujące ze sobą pola
         """
 
-        ls.sort()
+        ls.sort() 
         counter = 0
         for i in range(1, len(ls)):
             if ls[i] == ls[i-1] + 1:

@@ -31,15 +31,18 @@ def basic_mutation(sol: 'Solution', index=None) -> None:
 '''
 Zamienia element rozwiązania na element sąsiadujący z nim w macierzy
 '''         
-def territorial_mutation(sol: 'Solution') -> None:
+def territorial_mutation(sol: 'Solution', index: int = None) -> None:
     # Dopóki nie odnaleźliśmy niezajętego pola
     while True:
         # Losowo wybieramy element rozwiązania
-        i = random.choice(range(sol.problem.n))
+        if index is None:
+            i = random.choice(range(sol.problem.n))
+        else:
+            i = index
         
         # Wybieramy nowe pole macierzy sąsiadujące z poprzednim, pamiętając o ograniczeniach
-        new_x = min(sol.problem.size[0], max(0, sol.vector[i][0] + random.choice([-1, 0, 1])))
-        new_y = min(sol.problem.size[1], max(0, sol.vector[i][1] + random.choice([-1, 0, 1])))
+        new_x = min(sol.problem.size[0]-1, max(0, sol.vector[i][0] + random.choice([-1, 0, 1])))
+        new_y = min(sol.problem.size[1]-1, max(0, sol.vector[i][1] + random.choice([-1, 0, 1])))
         
         if (new_x, new_y) not in sol.vector:
             sol.vector[i] = (new_x, new_y)
@@ -61,7 +64,7 @@ def permutation_mutation(sol: 'Solution') -> None:
     sol.vector[i], sol.vector[i_2] = sol.vector[i_2], sol.vector[i]
   
 '''
-Odrzuca element rozwiązania o najmniejszej różnicy wartości nagody z kosztem transportu
+Odrzuca element rozwiązania o najmniejszej różnicy wartości nagrody z kosztem transportu
 '''  
 def max_reward_mutation(sol: 'Solution') -> None:
     min_reward = np.inf
@@ -100,9 +103,12 @@ def expansion_mutation(sol: 'Solution') -> None:
            max_d_y, new_y = d_y, ys[i] + (ys[i+1] - ys[i])//2
            
     
-    if (new_x, new_y) not in sol.vector:
-        i = random.choice(range(sol.problem.n))
-        sol.vector[i] = (new_x, new_y)
+    
+    i = random.choice(range(sol.problem.n))
+    sol.vector[i] = (new_x, new_y)
+    
+    if len(set(sol.vector)) != len(sol.vector):
+        basic_mutation(sol, i)
 
 
 """
@@ -110,6 +116,16 @@ def expansion_mutation(sol: 'Solution') -> None:
 Krzyżowanie
 ------------------------
 """
+
+def naive_crossover(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
+    parents = [parent_1, parent_2]
+    child_vector = []
+    for i in range(parent_1.problem.n):
+        child_vector.append(random.choice(parents).vector[i])
+    child = Solution(vector=child_vector, problem=parent_1.problem)
+    while not child.is_legal() or len(child.vector) != len(set(child.vector)):
+        basic_mutation(child)
+    return child
 
 def single_point_crossover_random(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
     """
@@ -307,7 +323,7 @@ def uniform_crossover_naive(parent_1: 'Solution', parent_2: 'Solution') -> 'Solu
 Selekcja
 ------------------------
 """
-def elitism_selection(population: list, percentage: int = 25) -> list:
+def elitism_selection(population: list, percentage: int = 20) -> list:
     """
     #### Selekcja elitystyczna - wybór najlepszych elite_size rozwiązań z populacji
     ----------
@@ -326,7 +342,7 @@ def elitism_selection(population: list, percentage: int = 25) -> list:
 
 
 
-def roulette_selection(population: list, percentage: int = 50) -> list:
+def roulette_selection(population: list, percentage: int = 20) -> list:
     """
     #### Selekcja ruletkowa
     ----------
@@ -343,7 +359,7 @@ def roulette_selection(population: list, percentage: int = 50) -> list:
     
     num_select = int(len(population)*(percentage/100))
 
-    population.sort()
+    population.sort(key=lambda x: x.fitness, reverse=True)
     next_population = []
     total_fitness = sum(solution.fitness for solution in population)
 
@@ -367,10 +383,21 @@ def roulette_selection(population: list, percentage: int = 50) -> list:
             
         population.pop(index)
         cumulative_fitness.pop(index)
-
+    
+    """
+    # Czy nie wystarczy jak poniżej?
+    
+    weights=[x.fitness for x in population]
+    minimal = min(weights)
+    for i in range(len(weights)):
+        weights[i] -= minimal
+    
+    next_population = random.choices(population, k=int(len(population)*(percentage/100)), weights=weights)
+    """
+    
     return next_population
 
-def elitist_roulette_selection(population: list, elite_percentage: int = 15, percentage: int = 50) -> list:
+def elitist_roulette_selection(population: list, elite_percentage: int = 15, percentage: int = 20) -> list:
     """
     #### Elitist Selekcja Ruletkowa - zastosowany bardziej (?) zasobo bierny algorytm.
     ----------
@@ -390,7 +417,7 @@ def elitist_roulette_selection(population: list, elite_percentage: int = 15, per
 
     next_population = []
 
-    population.sort()
+    population.sort(key=lambda x: x.fitness, reverse=True)
 
     next_population = population[:elite_num]
 
@@ -418,7 +445,7 @@ def elitist_roulette_selection(population: list, elite_percentage: int = 15, per
     return next_population
 
 
-def tournament_selection(population: list, percentage: int = 50, tournament_size: int = 2) -> list:
+def tournament_selection(population: list, percentage: int = 20, tournament_size: int = 2) -> list:
     """
     #### Selekcja turniejowa
     ----------
@@ -434,19 +461,31 @@ def tournament_selection(population: list, percentage: int = 50, tournament_size
     """
 
     num_select = int(len(population) * (percentage/100))
+    
+    remaining_population = population.copy()
+    
+    lost_solutions = []
 
-    next_population = []
+    while len(remaining_population) > num_select:
+        group_a = random.sample(remaining_population, len(remaining_population)//2)
+        group_b = list(set(remaining_population) - set(group_a))
+        for i in range(len(group_a)):
+            if group_a[i].fitness > group_b[i].fitness:
+                remaining_population.remove(group_b[i])
+                lost_solutions.append(group_b[i])
+            else:
+                remaining_population.remove(group_a[i])
+                lost_solutions.append(group_a[i])
+    
+    lost_solutions.sort(key=lambda x: x.fitness, reverse=True)
+    
+    while len(remaining_population) < num_select:
+        remaining_population.append(lost_solutions.pop(0))
+    
+    return remaining_population
 
-    for _ in range(num_select):
-        tournament_contestants = random.sample(population, tournament_size)
-        winner = max(tournament_contestants, key=lambda x: x.fitness)
-        next_population.append(winner)
-        population.remove(winner)
 
-    return next_population
-
-
-def elitist_tournament_selection(population: list, percentage: int = 50, elite_percentage: int = 15, tournament_size: int = 2) -> list:
+def elitist_tournament_selection(population: list, percentage: int = 20, elite_percentage: int = 5, tournament_size: int = 2) -> list:
     """
     #### Elitarna Selekcja Turniejowa
     ----------
@@ -466,7 +505,7 @@ def elitist_tournament_selection(population: list, percentage: int = 50, elite_p
 
     next_population = []
 
-    population.sort()
+    population.sort(key= lambda x: x.fitness, reverse=True)
 
     next_population = population[:elite_num]
 
@@ -514,7 +553,7 @@ def naive_legitimacy(child: Solution, parent_1: Solution, parent_2: Solution, ma
         allowed_values = set(parent_1.vector + parent_2.vector)
         missing_values = allowed_values - unique_child
         
-        child.vector = list(unique_child) + random.sample(missing_values, len(child.vector) - len(unique_child))
+        child.vector = list(unique_child) + random.sample(list(missing_values), len(child.vector) - len(unique_child))
         child.evaluate_function()
 
     if child.is_legal():
@@ -529,4 +568,34 @@ def naive_legitimacy(child: Solution, parent_1: Solution, parent_2: Solution, ma
     child = Solution(vector=better_parent.vector.copy(), problem=better_parent.problem)
 
     return child
+
+def mutate_to_legal(solution: Solution, j: int):
+    solution.vector[j] = None
+    for x in range(solution.problem.size[0]):
+        for y in range(solution.problem.size[1]):
+            neighbors = [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]
+            valid = True
+            for neighbor, i in zip(neighbors, range(len(neighbors))):
+                if neighbor in solution.vector:
+                    if i == 0:
+                        if (x+2, y) in solution.vector or (x-1, y) in solution.vector:
+                            valid = False
+                            break
+                    if i == 1:
+                        if (x-2, y) in solution.vector or (x+1, y) in solution.vector:
+                            valid = False
+                            break
+                    if i == 2:
+                        if (x, y+2) in solution.vector or (x, y-1) in solution.vector:
+                            valid = False
+                            break
+                    if i == 3:
+                        if (x, y-2) in solution.vector or (x, y+1) in solution.vector:
+                            valid = False
+                            break
+            if valid:
+                solution.vector[j] = (x, y)
+            return
+                    
+                
 
