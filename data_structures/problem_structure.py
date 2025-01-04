@@ -18,7 +18,7 @@ class Tile():
         self.workers_required = workers_required
         self.reward = reward
         # Jak przeszkadza pogoda
-        self.weather_affection = random.choice([1, 2, 4, 5])
+        self.weather_affection = random.choice([500, 1000, 1500, 3000])
  
 class Problem():
     '''
@@ -40,15 +40,16 @@ class Problem():
     self.mutation_probs: lista prawdopodobieństw wyboru funkcji mutacji.
     '''
     def __init__(self, mutation_functions: list, mutation_probs: list, basic_mutation: callable, mutate_to_legal: callable, size: tuple[int] = (30, 30), n: int = 40, wage: float = 600, our_workers: int = 50, weather_prob: callable = lambda i: i * 1/20, penalty: float = 5000):
-
+        # Klasa Problem automatycznie generuje swoje atrybuty przy inicjalizacji.
+        # Aby wgrać swój problem należy skorzystać z odpowiednich metod.
         self.n = n
         self.size = size
         self.weather_prob = weather_prob
         self.penalty = penalty
         self.our_workers = our_workers
         self.wage = wage
-        self.a_wage = wage*1.25
-        self.b_wage = wage*1.6
+        self.a_wage = wage*random.choice(range(115, 150, 5))/100
+        self.b_wage = wage*random.choice(range(150, 170, 5))/100
         self.a_workers = int(our_workers * 0.3)
         self.b_workers = int(our_workers * 0.2)
         self.mutation_functions = mutation_functions
@@ -62,11 +63,19 @@ class Problem():
             self.matrix.append([])
             for j in range(size[1]):
                 workers_required = random.choice(range(our_workers, int(our_workers*1.5)))
-                reward = workers_required * random.choice(range(600, 750, 10))
+                reward = workers_required * random.choice(range(620, 770, 10))
                 # Koszt transportu jest proporcjonalny do odległości pola od lewego górnego rogu macierzy lasu.
                 self.matrix[i].append(Tile(transport_cost=50*(i+j+1), workers_required=workers_required, reward=reward))
             
-            
+    def load(self, matrix: list[list[Union[float, int]]]):
+        '''
+        Metoda wczytująca problem z macierzy.
+        ''' 
+        self.matrix = []
+        for i in range(len(matrix)):
+            self.matrix.append([])
+            for j in range(len(matrix[i])):
+                self.matrix[i].append(Tile(transport_cost=matrix[i][j][0], workers_required=matrix[i][j][1], reward=matrix[i][j][2]))
   
 class Solution():
     '''
@@ -90,14 +99,17 @@ class Solution():
 
     def _perform_mutation(self):
         mutation_function = random.choices(self.problem.mutation_functions, weights=self.problem.mutation_probs, k=1)[0]
-        mutation_function(self)
+        i = mutation_function(self)
         
+        # Jeśli po zastosowaniu mutacji uzyskaliśmy nielegalne rozwiązanie, 50 razy próbujemy zastosować mutację podstawową (losową).
+        # Jeśli nie uzyskamy legalnego rozwiązania, znajdujemy najbliższe możliwe rozwiązanie, używając funkcji mutate_to_legal
         counter = 0
         while not self.is_legal():
-            if counter < 50:
-                self.problem.basic_mutation(self)
+            if counter < 10:
+                self.problem.basic_mutation(self, i)
             else:
-                self.problem.mutate_to_legal(self)
+                self.problem.mutate_to_legal(self, i)
+            counter += 1
 
 
     # def crossover(self, solution2: 'Solution' ) -> 'Solution':

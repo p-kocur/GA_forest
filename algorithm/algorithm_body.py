@@ -112,10 +112,11 @@ class GeneticAlgorithm:
 
         generation = 0
 
-        
+        # Tworzymy listy, w których będziemy zapisywać pośrednie wyniki w trakcie pracy algorytmu
         bests = []
         avgs = []
         worsts = []
+        
         # Dopóki nie osiągniemy maksymalnej liczby iteracji
         while generation < self.max_iter:
             # Selekcja
@@ -124,6 +125,7 @@ class GeneticAlgorithm:
             # Generowanie nowej populacji przez krzyżowanie i mutację
             new_population = self.new_generation(selected_population, population)
 
+            # Aktualizujemy "wartość" każdego rozwiązania w populacji
             for solution in new_population:
                 solution.evaluate_function()
 
@@ -165,26 +167,31 @@ class GeneticAlgorithm:
                 vector.append((x, y))
                 
             sol = Solution(vector=vector, problem=self.problem)
+            
+            # Mutujemy dopóki rozwiązanie nie będzie legalne
             while not sol.is_legal():
-                sol.mutation()
+                sol.problem.basic_mutation(sol)
+                
+            # Następnie dodajemy je do populacji
             population.append(sol)
                 
         return population
     
     def new_generation(self, selected_population: list, old_population: list) -> list:
         """
+        #### Tworzenie nowej populacji na podstawie rozwiązań wybranych w procesie selekcji i całości poprzedniej populacji
         ----------
         #### Parametry
         ----------
         self
         selected_population: list - populacja otrzymana z procesu selekcji
+        old_population: list - populacja poprzednia
         """
         new_population = []
 
         # Proces krzyżowania
         if self.leave_parents:
             new_population = selected_population
-
             while len(new_population) < self.population_size:
                 parent_1, parent_2 = random.sample(old_population, 2)
  

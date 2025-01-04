@@ -26,7 +26,7 @@ def basic_mutation(sol: 'Solution', index=None) -> None:
         y = random.choice(possible_y)
         if (x, y) not in sol.vector:
             sol.vector[i] = (x, y)
-            return
+            return i
 
 '''
 Zamienia element rozwiązania na element sąsiadujący z nim w macierzy
@@ -46,7 +46,7 @@ def territorial_mutation(sol: 'Solution', index: int = None) -> None:
         
         if (new_x, new_y) not in sol.vector:
             sol.vector[i] = (new_x, new_y)
-            return
+            return i
 
 '''
 Zamienia element rozwiązania z etapu i z rozwiązaniem z etapu i+1 (lub i-1)
@@ -62,6 +62,7 @@ def permutation_mutation(sol: 'Solution') -> None:
     else:
         i_2 = i + 1  
     sol.vector[i], sol.vector[i_2] = sol.vector[i_2], sol.vector[i]
+    return i
   
 '''
 Odrzuca element rozwiązania o najmniejszej różnicy wartości nagrody z kosztem transportu
@@ -75,7 +76,7 @@ def max_reward_mutation(sol: 'Solution') -> None:
         if value < min_reward:
             min_reward, min_element_i = value, i
     
-    basic_mutation(sol, min_element_i)
+    return basic_mutation(sol, min_element_i)
     
 '''
 Zamienia element rozwiązania z elementem macierzy lężącym w obszarze, gdzie nie leży żaden element rozwiązania.
@@ -109,6 +110,8 @@ def expansion_mutation(sol: 'Solution') -> None:
     
     if len(set(sol.vector)) != len(sol.vector):
         basic_mutation(sol, i)
+        
+    return i
 
 
 """
@@ -570,6 +573,18 @@ def naive_legitimacy(child: Solution, parent_1: Solution, parent_2: Solution, ma
     return child
 
 def mutate_to_legal(solution: Solution, j: int):
+    """
+    #### Naprawianie nielegalnego rozwiązania po wykonaniu mutacji
+    ----
+    #### Parametry
+    ----
+    solution: rozwiązanie, które chcemy naprawić
+    j: indeks elementu w wektorze rozwiązania, który został zmutowany
+    
+    Schemat działania:
+    Znajdujemy pierwsze możliwe do wykorzystania pole w macierzy problemu i wstawiamy je do
+    rozwiązania w miejscu wcześniej niepoprawnie zmutowanego elementu.
+    """
     solution.vector[j] = None
     for x in range(solution.problem.size[0]):
         for y in range(solution.problem.size[1]):
