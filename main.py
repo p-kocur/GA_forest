@@ -18,8 +18,7 @@ def main():
         '''
         Funkcja wywoływana przez przycisk "Start"
         '''
-        # print("Parametry\n") # Debug
-        # print(f"{parameters}\n") # Debug
+        print(f"{parameters}\n")
 
         # Funkcja obsługująca prace algorytmu 
         def run_algorithm(starting_parameters, result_callback):
@@ -34,6 +33,7 @@ def main():
                 population_size = starting_parameters['population_size'],
                 max_iter = starting_parameters['iteration_limit'],
                 mutation_probability = starting_parameters['mutation_probability'],
+                elite_percentage = starting_parameters['elite_percentage'],
                 interrupt_flag=should_interrupt.is_set,  # Obsluga przerwania poprzez nacisniecie ESC
             )
 
@@ -52,6 +52,8 @@ def main():
             gui.bests = bests
             gui.avgs = avgs
             gui.worsts = worsts
+
+            print(best_sol.vector)
 
         # Uruchomienie algorytmu w nowym wątku
         algorithm_thread = threading.Thread(

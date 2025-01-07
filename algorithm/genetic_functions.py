@@ -3,9 +3,6 @@ import random
 
 from data_structures.problem_structure import Solution, Problem, Tile
 
-
-
-
 '''
 Zamienia element rozwiązania z losowym elementem macierzy problemu
 '''
@@ -130,7 +127,7 @@ def naive_crossover(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
         basic_mutation(child)
     return child
 
-def single_point_crossover_random(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
+'''def single_point_crossover_random(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
     """
     #### Krzyżowanie jednopunktowe na reprezentacji macierzowej rodziców
     ----------
@@ -212,7 +209,7 @@ def single_point_matrix_crossover(m1: np.array, m2: np.array, split_point, side:
         m[:][:split_point] = m2[:][:split_point] 
         return m
 
-    ValueError("Wrong side argument")
+    ValueError("Wrong side argument")'''
 
 
 
@@ -233,29 +230,32 @@ def single_point_crossover_vector(parent_1: 'Solution', parent_2: 'Solution') ->
     """
     first_is_parent_1 = np.random.random() < 0.5
 
-    smaller_size = min(len(parent_1.vector), len(parent_2.vector))
-    crossover_point = np.random.randint(1, smaller_size)
+    size = len(parent_1.vector)
+    crossover_point = np.random.randint(1, size)
 
     if first_is_parent_1:
         child_vector = (
             parent_1.vector[:crossover_point] +
-            parent_2.vector[crossover_point:len(parent_2.vector)]
+            parent_2.vector[crossover_point:]
         )
     else:
         child_vector = (
             parent_2.vector[:crossover_point] +
-            parent_1.vector[crossover_point:len(parent_1.vector)]
+            parent_1.vector[crossover_point:]
         )
 
     child = Solution(vector=child_vector, problem=parent_1.problem)
 
-    child = naive_legitimacy(child, parent_1, parent_2)
+    while not child.is_legal() or len(child.vector) != len(set(child.vector)):
+        basic_mutation(child)
+
+    child.evaluate_function()
 
     return child
 
 
 
-def multi_point_crossover_vector(parent_1: 'Solution', parent_2: 'Solution', n_points=2) -> 'Solution':
+def multi_point_crossover_vector(parent_1: 'Solution', parent_2: 'Solution', n_points=4) -> 'Solution':
     """
     #### Krzyżowanie wielopunktowe - operuje na wektorach rodziców
     ----------
@@ -287,37 +287,11 @@ def multi_point_crossover_vector(parent_1: 'Solution', parent_2: 'Solution', n_p
 
     child = Solution(vector=child_vector, problem=parent_1.problem)
 
-    child = naive_legitimacy(child, parent_1, parent_2)
+    while not child.is_legal() or len(child.vector) != len(set(child.vector)):
+        basic_mutation(child)
 
-    return child
-
-
-def uniform_crossover_naive(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
-    """
-    #### Krzyżowanie jednostajne - operuje na wektorach rodziców
-    ----------
-    #### Parametry
-    ----------
-    parent_1: Solution, rodzic 1
-    parent_2: Solution, rodzic 2
-    return: Solution, dziecko
-
-    Schemat rozwiązania:
-    Każdy element wektora dziecka jest losowo wybierany z jednego z dwóch rodziców.
-    """
-    smaller_size = min(len(parent_1.vector), len(parent_2.vector))
-    vector_1 = parent_1.vector
-    vector_2 = parent_2.vector
-
-    child_vector = [
-        vector_1[i] if np.random.rand() < 0.5 else vector_2[i]
-        for i in range(smaller_size)
-    ]
-
-    child = Solution(vector=child_vector, problem=parent_1.problem)
+    child.evaluate_function()
     
-    child = naive_legitimacy(child, parent_1, parent_2)
-
     return child
 
 
@@ -328,7 +302,7 @@ Selekcja
 """
 def elitism_selection(population: list, percentage: int = 20) -> list:
     """
-    #### Selekcja elitystyczna - wybór najlepszych elite_size rozwiązań z populacji
+    #### Selekcja elitystyczna - wybór najlepszego procentu rozwiązań z populacji
     ----------
     #### Parametry
     ----------
@@ -340,8 +314,8 @@ def elitism_selection(population: list, percentage: int = 20) -> list:
     Sortujemy populację na podstawie wartości funkcji celu i wybieramy najlepszy procent rozwiązań.
     """
     elite_size = int(len(population)*(percentage/100))
-    sorted_population = sorted(population, key=lambda x: x.fitness)
-    return sorted_population[:elite_size]
+    population.sort(key=lambda x: x.fitness, reverse=True)
+    return population[:elite_size] 
 
 
 
@@ -359,7 +333,7 @@ def roulette_selection(population: list, percentage: int = 20) -> list:
     Dla każdej osoby w populacji obliczamy prawdopodobieństwo wyboru, 
     a następnie losowo wybieramy rozwiązanie na podstawie tych prawdopodobieństw.
     """
-    
+        
     num_select = int(len(population)*(percentage/100))
 
     population.sort(key=lambda x: x.fitness, reverse=True)
@@ -386,69 +360,11 @@ def roulette_selection(population: list, percentage: int = 20) -> list:
             
         population.pop(index)
         cumulative_fitness.pop(index)
-    
-    """
-    # Czy nie wystarczy jak poniżej?
-    
-    weights=[x.fitness for x in population]
-    minimal = min(weights)
-    for i in range(len(weights)):
-        weights[i] -= minimal
-    
-    next_population = random.choices(population, k=int(len(population)*(percentage/100)), weights=weights)
-    """
-    
-    return next_population
 
-def elitist_roulette_selection(population: list, elite_percentage: int = 15, percentage: int = 20) -> list:
-    """
-    #### Elitist Selekcja Ruletkowa - zastosowany bardziej (?) zasobo bierny algorytm.
-    ----------
-    #### Parametry
-    ----------
-    population: list, populacja rozwiązań
-    elite_percentage: int, procent elitarnych rozwiązań do zachowania
-    percentage: int, procent populacji który zachowujemy
-    return: Solution, wybrane rozwiązanie
-
-    Schemat rozwiązania:
-    Elitarne rozwiązania mają 100% szansę na wybór, a pozostałe rozwiązania 
-    są wybierane ruletką w oparciu o ich fitness.
-    """
-    
-    elite_num = int(len(population) * (elite_percentage / 100))
-
-    next_population = []
-
-    population.sort(key=lambda x: x.fitness, reverse=True)
-
-    next_population = population[:elite_num]
-
-    remaining_population = population[elite_num:]
-
-    num_select = int(len(remaining_population) * (percentage / 100))
-
-    if not remaining_population or num_select == 0:
-        return next_population
-
-    total_fitness = sum(solution.fitness for solution in remaining_population)
-
-    for _ in range(num_select):
-        selection_point = random.uniform(0, total_fitness)
-        cumulative_fitness = 0
-
-        for index, solution in enumerate(remaining_population):
-            cumulative_fitness += solution.fitness
-            if cumulative_fitness >= selection_point:
-                next_population.append(solution)
-                total_fitness -= solution.fitness
-                remaining_population.pop(index)
-                break
 
     return next_population
 
-
-def tournament_selection(population: list, percentage: int = 20, tournament_size: int = 2) -> list:
+def tournament_selection(population: list, percentage: int = 20, tournament_size: int = 4) -> list:
     """
     #### Selekcja turniejowa
     ----------
@@ -488,89 +404,11 @@ def tournament_selection(population: list, percentage: int = 20, tournament_size
     return remaining_population
 
 
-def elitist_tournament_selection(population: list, percentage: int = 20, elite_percentage: int = 5, tournament_size: int = 2) -> list:
-    """
-    #### Elitarna Selekcja Turniejowa
-    ----------
-    #### Parametry
-    ----------
-    population: list, populacja rozwiązań
-    percentage: int, procent populacji który zachowujemy
-    elite_percentage: int, procent elitarnych rozwiązań do zachowania
-    tournament_size: int, liczba rozwiązań biorących udział w turnieju
-    return: Solution, wybrane rozwiązanie
-
-    Schemat rozwiązania:
-    Elitarne rozwiązania zawsze biorą udział w selekcji, a pozostałe wybierane są 
-    w ramach selekcji turniejowej.
-    """
-    elite_num = int(len(population) * (elite_percentage/100))
-
-    next_population = []
-
-    population.sort(key= lambda x: x.fitness, reverse=True)
-
-    next_population = population[:elite_num]
-
-    remaining_population = population[elite_num:]
-
-    num_select = int(len(remaining_population) * (percentage/100))
-
-    if not remaining_population or num_select == 0:
-        return next_population
-
-    for _ in range(num_select):
-        tournament_contestants = random.sample(remaining_population, tournament_size)
-        winner = max(tournament_contestants, key=lambda x: x.fitness)
-        next_population.append(winner)
-        remaining_population.remove(winner)
-        
-    return next_population
-
 """
 ------------------------
 Inne
 ------------------------
 """
-
-
-def naive_legitimacy(child: Solution, parent_1: Solution, parent_2: Solution, max_retries: int = 10) -> Solution:
-    """
-    #### Sprawdzanie i dostosowywanie poprawności dziecka
-    ----------
-    #### Parametry
-    ----------
-    child: Solution, dziecko, które ma zostać zweryfikowane
-    parent_1: Solution, rodzic 1, dla porównania
-    parent_2: Solution, rodzic 2, dla porównania
-    return: Solution, poprawione dziecko, jeśli konieczne
-
-    Schemat rozwiązania:
-    Weryfikujemy, czy dziecko spełnia kryteria poprawności. Jeśli jest to konieczne, dostosowujemy jego 
-    elementy, aby były zgodne z wymaganiami, np. eliminując duplikaty lub elementy poza dozwolonym obszarem.
-    Jeżeli dziecko nie zostanie naprawione w liczbie max_retries przypisz mu dane z rodzica.
-    """
-    
-    if len(child.vector) != len(set(child.vector)):
-        unique_child = set(child.vector)
-        allowed_values = set(parent_1.vector + parent_2.vector)
-        missing_values = allowed_values - unique_child
-        
-        child.vector = list(unique_child) + random.sample(list(missing_values), len(child.vector) - len(unique_child))
-        child.evaluate_function()
-
-    if child.is_legal():
-        return child
-
-    for _ in range(max_retries):
-        child._perform_mutation()
-        if child.is_legal():
-            return child
-
-    better_parent = parent_1 if parent_1.fitness > parent_2.fitness else parent_2
-    child = Solution(vector=better_parent.vector.copy(), problem=better_parent.problem)
-
-    return child
 
 def mutate_to_legal(solution: Solution, j: int):
     """

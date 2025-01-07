@@ -23,12 +23,11 @@ class GeneticAlgorithmGUI:
         )
         self.matrix_space.grid(column=0, row=0, columnspan=3, rowspan=4)
 
-        self.population_size = IntVar(value=5)
-        self.iteration_limit = IntVar(value=50)
-        self.problem_size = IntVar(value=5)
-        self.mutation_probability = IntVar(value=100)
-        self.crossover_probability = IntVar(value=100)
-        self.selection_probability = IntVar(value=100)
+        self.population_size = IntVar(value=100)
+        self.iteration_limit = IntVar(value=500)
+        self.problem_size = IntVar(value=40)
+        self.mutation_probability = IntVar(value=0.05)
+        self.elite_percent = IntVar(value=30)
 
         self.options = []
 
@@ -66,6 +65,7 @@ class GeneticAlgorithmGUI:
             ("Ilość iteracji: ", self.iteration_limit),
             ("Wielkość problemu: ", self.problem_size),
             ("Prawdopo. mutacji: ", self.mutation_probability),
+            ("Procent elity: ", self.elite_percent)
         ]
 
         for i, (label, var) in enumerate(labels_and_vars, start=2):
@@ -82,19 +82,15 @@ class GeneticAlgorithmGUI:
         ]
 
         crossover_options = [
-            ("Naive crossover", BooleanVar(name="naive_crossover")),
-            #("Single Point Crossover Random", BooleanVar(name='single_point_crossover_random')),
-            #("Single Point Matrix Crossover", BooleanVar(name='single_point_matrix_crossover')),
-            ("Single Point Crossover Vector", BooleanVar(name='single_point_crossover_vector')),
-            ("Multi Point Crossover Vector", BooleanVar(name='multi_point_crossover_vector')),
-            ("Uniform Crossover Naive", BooleanVar(name='uniform_crossover_naive')),
+            ("Krzyżowanie losowe", BooleanVar(name="naive_crossover")),
+            ("Krzyżowanie jednopunktowe", BooleanVar(name='single_point_crossover_vector')),
+            ("Krzyżowanie wielopunktowe", BooleanVar(name='multi_point_crossover_vector'))
         ]
 
         selection_options = [
             ("Selekcja ruletkowa", BooleanVar(name='roulette_selection')),
-            ("Selekcja elitarnych ruletkowa", BooleanVar(name='elitist_roulette_selection')),
-            ("Selekcja turniejowa", BooleanVar(name='tournament_selection')),
-            ("Selekcja elitarnych turniejowa", BooleanVar(name='elitist_tournament_selection')),
+            ("Selekcja elit", BooleanVar(name='elitism_selection')),
+            ("Selekcja turniejowa", BooleanVar(name='tournament_selection'))
         ]
 
         self.options = [
@@ -183,8 +179,7 @@ class GeneticAlgorithmGUI:
             "iteration_limit": self.iteration_limit.get(),
             "problem_size": self.problem_size.get(),
             "mutation_probability": self.mutation_probability.get(),
-            "crossover_probability": self.crossover_probability.get(),
-            "selection_probability": self.selection_probability.get(),
+            "elite_percentage": self.elite_percent.get(),
             "mutations": mutations, 
             "crossovers": crossovers,
             "selection": selections, 
