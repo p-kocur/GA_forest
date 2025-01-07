@@ -26,7 +26,7 @@ class GeneticAlgorithmGUI:
         self.population_size = IntVar(value=100)
         self.iteration_limit = IntVar(value=500)
         self.problem_size = IntVar(value=40)
-        self.mutation_probability = IntVar(value=0.05)
+        self.mutation_probability = IntVar(value=0.5)
         self.elite_percent = IntVar(value=30)
 
         self.options = []
