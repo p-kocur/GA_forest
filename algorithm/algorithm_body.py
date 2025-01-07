@@ -5,8 +5,6 @@ from data_structures.problem_structure import Problem, Solution, Tile
 from algorithm.genetic_functions import (
     naive_crossover,
     single_point_crossover_vector,
-    single_point_crossover_random,
-    single_point_matrix_crossover,
     multi_point_crossover_vector,
     uniform_crossover_naive,
     elitism_selection,
@@ -22,6 +20,30 @@ from algorithm.genetic_functions import (
     mutate_to_legal
 )
 
+# Nie jestem pewny jak inaczej przekazywać funkcje z GUI->main->algorithm_body 
+# Niż przy użyciu mapy funkcji i get_function_list przypisującej funkcje z listy do odpowiednich str.
+function_map = {
+    'naive_crossover': naive_crossover,
+    'single_point_crossover_vector': single_point_crossover_vector,
+    'multi_point_crossover_vector': multi_point_crossover_vector,
+    'uniform_crossover_naive': uniform_crossover_naive,
+    'elitism_selection': elitism_selection,
+    'roulette_selection': roulette_selection,
+    'tournament_selection': tournament_selection,
+    'elitist_roulette_selection': elitist_roulette_selection,
+    'elitist_tournament_selection': elitist_tournament_selection,
+    'basic_mutation': basic_mutation,
+    'territorial_mutation': territorial_mutation,
+    'permutation_mutation': permutation_mutation,
+    'max_reward_mutation': max_reward_mutation,
+    'expansion_mutation': expansion_mutation,
+    'mutate_to_legal': mutate_to_legal
+}
+
+def get_function_list(function_names, function_map):
+    returns = [function_map[name] for name in function_names if name in function_map]
+    return returns
+
 
 class GeneticAlgorithm:
     """
@@ -29,70 +51,68 @@ class GeneticAlgorithm:
     ----------
     #### Parametry
     ----------
-    crossover_probabilities: list = None, lista dostepnych metod krzyżowania wraz z ich prawdopodobienstwem
-    selection_probabilities: list = None, lista dostepnych metod selekcji wraz z ich prawdopodobienstwem
-    mutation_probability: list = None, lista dostepnych metod mutacji wraz z ich prawdopodobienstwem
+    crossover_types: list = None, lista dostepnych metod krzyżowania
+    selection_types: list = None, lista dostepnych metod selekcji
+    mutation_types: list = None, lista dostepnych metod mutacji
+    mutation_probability: float = 0.1, prawdopodopienstwo wystapienia mutacji
     first_population: list = None, przekazanie startowej populacji, None: losowa generacja pierwszej generacji
     population_size: int = 100, wielkosc generacji (populacji), tj. ilość Solution
     max_iter: int = 100, maksymalna ilosc iteracji
     problem: Problem = None, problem który rozwiazujemy
     leave_parents: bool = True, jezeli True wszystkie selekcje działają na zasadzie elity tj. populacja pozostała po selekcji jest przekazywana do kolejnej generacji  
-
+    interrupt_flag: callable/bool: False, flaga przerwania algorytmu (callable)
     Schemat rozwiązania:
     """
 
     def __init__(self,
-                crossover_probabilities: list = None,
-                selection_probabilities: list = None,
-                mutation_probabilities: list = None,
+                crossover_types: list = None, #
+                selection_types: list = None, #
+                mutation_types: list = None,
                 mutation_probability: float = 0.1,
                 first_population: list = None, 
                 population_size: int = 1000,
                 max_iter: int = 1000,
                 problem: Problem = None,
-                leave_parents: bool = True):
+                leave_parents: bool = True,
+                interrupt_flag = False):
         
 
-        # listy crossover_probabilities oraz selection_proability
-        # jest tylko po to że taka forma jest bardziej czytelna 
-        # niz cztery odzielne listy faktycznie wykorzystywane do algorytmu  
-
-        if not crossover_probabilities:
-            crossover_probabilities = [
-            {"crossover": naive_crossover, "probability": 1.0}
-            #{"crossover": single_point_crossover_random, "probability": 0.80},
-            #{"crossover": single_point_matrix_crossover, "probability": 0.60},
-            #{"crossover": single_point_crossover_vector, "probability": 0.75},
-            #{"crossover": multi_point_crossover_vector, "probability": 0.65},
-            #{"crossover": uniform_crossover_naive, "probability": 0.50}
+        if not crossover_types:
+            self.crossover_types = [
+            naive_crossover,
+            #single_point_crossover_random,
+            #single_point_matrix_crossover,
+            #single_point_crossover_vector,
+            #multi_point_crossover_vector,
+            #uniform_crossover_naive
             ]
-        self.crossover_types = [entry["crossover"] for entry in crossover_probabilities]
-        self.crossover_weights = [entry["probability"] for entry in crossover_probabilities]
+        else:
+            self.crossover_types = get_function_list(crossover_types, function_map)
             
-        if not selection_probabilities:
-            selection_probabilities = [
-            {"selection": elitism_selection, "probability": 0.80},
-            {"selection": roulette_selection, "probability": 0.60},
-            {"selection": elitist_roulette_selection, "probability": 0.75},
-            {"selection": tournament_selection, "probability": 0.65},
-            {"selection": elitist_tournament_selection, "probability": 0.50}
+        if not selection_types:
+            self.selection_types = [
+            elitism_selection,
+            #'roulette_selection,
+            #'elitist_roulette_selection,
+            #'tournament_selection,
+            #'elitist_tournament_selection
             ]
-        self.selection_types = [entry["selection"] for entry in selection_probabilities]
-        self.selection_weights = [entry["probability"] for entry in selection_probabilities]
+        else:
+            self.selection_types = get_function_list(selection_types, function_map)
         
-        if not mutation_probabilities:
-            mutation_probabilities = [
-            {"mutation": basic_mutation, "probability": 0.2},
-            {"mutation": territorial_mutation, "probability": 0.2},
-            {"mutation": permutation_mutation, "probability": 0.2},
-            {"mutation": max_reward_mutation, "probability": 0.2},
-            {"mutation": expansion_mutation, "probability": 0.2}
+        if not mutation_types:
+            self.mutation_types = [
+            basic_mutation,
+            #territorial_mutation,
+            #permutation_mutation,
+            #max_reward_mutation,
+            #expansion_mutation,
             ]
-        self.mutation_types = [entry["mutation"] for entry in mutation_probabilities]
-        self.mutation_weights = [entry["probability"] for entry in mutation_probabilities]
+        else:            
+            self.mutation_types = get_function_list(mutation_types, function_map)
   
         if problem is None:
-            self.problem = Problem(self.mutation_types, self.mutation_weights, basic_mutation=basic_mutation, mutate_to_legal=mutate_to_legal)
+            self.problem = Problem(self.mutation_types, basic_mutation=basic_mutation, mutate_to_legal=mutate_to_legal)
         else:
             self.problem = problem
   
@@ -101,6 +121,7 @@ class GeneticAlgorithm:
         self.population_size = population_size
         self.max_iter = max_iter
         self.leave_parents = leave_parents
+        self.interrupt_flag = interrupt_flag
 
     def run(self):
         if not self.first_population:
@@ -119,6 +140,10 @@ class GeneticAlgorithm:
         
         # Dopóki nie osiągniemy maksymalnej liczby iteracji
         while generation < self.max_iter:
+            if self.interrupt_flag and self.interrupt_flag():
+                print(f"Algorytm zatrzymany na {generation} generacji.")
+                break
+
             # Selekcja
             selected_population = self.selection_method(population)
 
@@ -143,12 +168,16 @@ class GeneticAlgorithm:
             # Średnie
             avg_solution = np.mean([solution.fitness for solution in population])
             avgs.append(avg_solution)
+
+            potential_solution = max(population, key=lambda x: x.fitness)
+            if best_solution is None or potential_solution.fitness > best_solution.fitness:
+                best_solution = potential_solution
             
             print("Generation: {:d}, Best fitness: {:.2f}, Worst fitness: {:.2f}, Avg fitness: {:.2f}".format(generation, best_solution.fitness, worst_solution.fitness, avg_solution))
 
             generation += 1
 
-        return np.array(bests), np.array(avgs), np.array(worsts)
+        return best_solution, np.array(bests), np.array(avgs), np.array(worsts)
     
 
     def generate_first_population(self, solution_size, generation_size):
@@ -214,14 +243,7 @@ class GeneticAlgorithm:
         #### Funkcja krzyzująca
         ----------
         """
-        
-        
-        # operation = random.choices(self.crossover_types, weights=self.crossover_weights, k=100)[0]
-        # Czy nie powinniśmy jednak wybrać tylko jednej operacji krzyżowania?
-        # Tak jak poniżej
-        
-        operation = random.choices(self.crossover_types, weights=self.crossover_weights, k=1)[0]
-        
+        operation = random.choices(self.crossover_types, k=1)[0]
         return(operation(parent_1, parent_2))
     
     def selection_method(self, population):
@@ -229,12 +251,6 @@ class GeneticAlgorithm:
         #### Funkcja selekcji
         ----------
         """
-        
-        # operation = random.choices(self.selection_types, weights=self.selection_weights, k=100)[0]
-        # Czy nie powinniśmy jednak wybrać tylko jednej operacji selekcji?
-        # Tak jak poniżej
-        
-        operation = random.choices(self.selection_types, weights=self.selection_weights, k=1)[0]
-        
+        operation = random.choices(self.selection_types, k=1)[0]
         return(operation(population))
 

@@ -39,7 +39,7 @@ class Problem():
     self.mutation_functions: lista funkcji mutacji,
     self.mutation_probs: lista prawdopodobieństw wyboru funkcji mutacji.
     '''
-    def __init__(self, mutation_functions: list, mutation_probs: list, basic_mutation: callable, mutate_to_legal: callable, size: tuple[int] = (30, 30), n: int = 40, wage: float = 600, our_workers: int = 50, weather_prob: callable = lambda i: i * 1/20, penalty: float = 5000):
+    def __init__(self, mutation_functions: list, basic_mutation: callable, mutate_to_legal: callable, size: tuple[int] = (30, 30), n: int = 40, wage: float = 600, our_workers: int = 50, weather_prob: callable = lambda i: i * 1/20, penalty: float = 5000):
         # Klasa Problem automatycznie generuje swoje atrybuty przy inicjalizacji.
         # Aby wgrać swój problem należy skorzystać z odpowiednich metod.
         self.n = n
@@ -53,7 +53,6 @@ class Problem():
         self.a_workers = int(our_workers * 0.3)
         self.b_workers = int(our_workers * 0.2)
         self.mutation_functions = mutation_functions
-        self.mutation_probs = mutation_probs
         self.basic_mutation = basic_mutation
         self.mutate_to_legal = mutate_to_legal
 
@@ -91,44 +90,23 @@ class Solution():
         self.problem = problem
         self.vector = vector 
         self.fitness = self.evaluate_function()
-        # self.crossover_functions, self.crossover_probs = map(list, zip(*crossover_strategies))
-        # self.mutation_functions, self.mutation_probs = map(list, zip(*mutation_strategies))
 
     def mutation(self):
         self._perform_mutation()
 
     def _perform_mutation(self):
-        mutation_function = random.choices(self.problem.mutation_functions, weights=self.problem.mutation_probs, k=1)[0]
+        mutation_function = random.choices(self.problem.mutation_functions, k=1)[0]
         i = mutation_function(self)
         
         # Jeśli po zastosowaniu mutacji uzyskaliśmy nielegalne rozwiązanie, 50 razy próbujemy zastosować mutację podstawową (losową).
         # Jeśli nie uzyskamy legalnego rozwiązania, znajdujemy najbliższe możliwe rozwiązanie, używając funkcji mutate_to_legal
         counter = 0
-        while not self.is_legal():
+        while not self.is_legal() and counter < 50:
             if counter < 10:
                 self.problem.basic_mutation(self, i)
             else:
                 self.problem.mutate_to_legal(self, i)
             counter += 1
-
-
-    # def crossover(self, solution2: 'Solution' ) -> 'Solution':
-    #     """
-    #     # TODO Wykorzystanie funkcji z genetic_functions
-    #     # TODO Wybór z dostepnych metod krzyżowania (losowy/deterministyczny) 
-    #     """
-    #     self._perform_crossover(solution2)
-
-    # def _perform_crossover(self, solution2: 'Solution') -> 'Solution':
-    #     """
-    #     # TODO Jak przekazywać wybór dodatkowych parametrów do funkcji krzyzowania np. single_point_crossover
-    #     # może otrzymywać 'strone' z której dzielimy  
-    #     """
-    #     crossover_function = random.choice(self.crossover_functions, 1, p=self.crossover_probs)
-    #     child = crossover_function(self, solution2)
-    #     while not child.is_legal():
-    #         child.mutation()
-    #     return child
 
     def evaluate_function(self):
         j = 0

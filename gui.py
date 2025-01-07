@@ -1,141 +1,228 @@
-from tkinter import BooleanVar, IntVar, ttk, Tk, Button
+from tkinter import BooleanVar, IntVar, ttk, Tk, Button, Toplevel
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-# Nie wiem dlaczego zmienne nie mają wpływu na wielkość okna
-WINDOW_SIZE = (1500, 800)
-LEFT_SIZE = (1000, 720)
-SIDE_PANEL_WIDTH = WINDOW_SIZE[0] - LEFT_SIZE[0]
+class GeneticAlgorithmGUI:
+    def __init__(self, root, on_start_callback=None):
+        self.root = root
+        self.on_start_callback = on_start_callback  # Odwołanie do przycisku start
 
-root = Tk()
-root.resizable(0, 0)
-root.title("BO2 - Algorytm Genetyczny")
+        self.root.resizable(0, 0)
+        self.root.title("BO2 - Algorytm Genetyczny")
+        
+        self.WINDOW_SIZE = (1500, 800)
+        self.LEFT_SIZE = (1000, 720)
+        self.SIDE_PANEL_WIDTH = self.WINDOW_SIZE[0] - self.LEFT_SIZE[0]
 
-content = ttk.Frame(root)
-content.grid(column=0, row=0)
+        self.content = ttk.Frame(self.root)
+        self.content.grid(column=0, row=0)
 
-# Miejsce na reprezentacje graficzną macierzy
-matrix_space = ttk.Frame(content, borderwidth=5, relief="ridge", width=LEFT_SIZE[0], height=LEFT_SIZE[1])
-matrix_space.grid(column=0, row=0, columnspan=3, rowspan=4)
+        self.matrix_space = ttk.Frame(
+            self.content, borderwidth=5, relief="ridge",
+            width=self.LEFT_SIZE[0], height=self.LEFT_SIZE[1]
+        )
+        self.matrix_space.grid(column=0, row=0, columnspan=3, rowspan=4)
 
+        self.population_size = IntVar(value=5)
+        self.iteration_limit = IntVar(value=50)
+        self.problem_size = IntVar(value=5)
+        self.mutation_probability = IntVar(value=100)
+        self.crossover_probability = IntVar(value=100)
+        self.selection_probability = IntVar(value=100)
 
-def draw_matrix():
-    n = problem_size.get()
+        self.options = []
 
-    rows, cols = n, n
+        
+        # Wykres rozwiazania
+        self.options = []
+        self.best_result = None
+        self.bests = []
+        self.avgs = []
+        self.worsts = []
+        self.state_label_text = 'Stan: Brak rezultatów'
 
-    fig, ax = plt.subplots(figsize=(10,10)) 
+        self._initialize_gui()
 
-    for i in range(rows + 1):
-        ax.plot([0, cols], [i, i], color='black', lw=1)
-
-    for i in range(cols + 1):
-        ax.plot([i, i], [0, rows], color='black', lw=1)
-
-    for i in range(rows + 1):
-        for j in range(cols + 1):
-            ax.scatter(j, i, color='black', s=35)
-
-    ax.set_xlim(-0.5, cols + 0.5)
-    ax.set_ylim(-0.5, rows + 0.5) 
-    ax.set_aspect('equal')
-
-    ax.axis('off')
-    canvas = FigureCanvasTkAgg(fig, master=matrix_space)
-    canvas.draw()
-
-    canvas.get_tk_widget().place(x=0, y=0, width=LEFT_SIZE[0], height=LEFT_SIZE[1])
-
-
-def create_section(parent, title, options, start_row=0):
-    ttk.Label(parent, text=title).grid(column=0, row=start_row, columnspan=2)
-    ttk.Separator(parent, orient="horizontal").grid(column=0, row=start_row + 1, columnspan=2, sticky="we")
-
-    for i, (text, variable) in enumerate(options, start=start_row + 2):
-        ttk.Checkbutton(parent, text=text, variable=variable).grid(column=0, row=i, sticky="nswe")
-
-def create_option_frame(parent, title, options, row):
-    frame = ttk.Frame(parent, borderwidth=5, height=150, width=SIDE_PANEL_WIDTH)
-    frame.grid(column=3, row=row, columnspan=2, sticky="nswe")
-    create_section(frame, title, options)
-    return options
-
-def start(options):
-    "PLACEHOLDER"
-    print(f"Wielkość populacji: {population_size.get()}")
-    print(f"Ilość iteracji: {iteration_limit.get()}")
-    for option_group in options:
-        for text, variable in option_group:
-            print(f"{text}: {'Enabled' if variable.get() else 'Disabled'}")
+        self.root.bind("<Escape>", self._on_escape)
 
 
-start_frame = ttk.Frame(content, borderwidth=5, height=150, width=SIDE_PANEL_WIDTH)
-start_frame.grid(column=3, row=0, columnspan=2, sticky="we")
 
-ttk.Label(start_frame, text="Zmienne startowe").grid(column=0, row=0, columnspan=2)
-ttk.Separator(start_frame, orient="horizontal").grid(column=0, row=1, columnspan=2, sticky="we")
+    def _initialize_gui(self):
+        self._create_start_frame()
+        self._create_option_frames()
+        self._create_buttons()
 
-ttk.Label(start_frame, text="Wielkość populacji: ").grid(column=0, row=2, sticky="w")
-population_size = IntVar()
-ttk.Entry(start_frame, textvariable=population_size, width=10).grid(column=1, row=2)
+    def _create_start_frame(self):
+        start_frame = ttk.Frame(
+            self.content, borderwidth=5, height=150, width=self.SIDE_PANEL_WIDTH
+        )
+        start_frame.grid(column=3, row=0, columnspan=2, sticky="we")
 
-ttk.Label(start_frame, text="Ilość iteracji: ").grid(column=0, row=3, sticky="w")
-iteration_limit = IntVar()
-ttk.Entry(start_frame, textvariable=iteration_limit, width=10).grid(column=1, row=3)
+        ttk.Label(start_frame, text="Zmienne startowe").grid(column=0, row=0, columnspan=2)
+        ttk.Separator(start_frame, orient="horizontal").grid(column=0, row=1, columnspan=2, sticky="we")
 
-ttk.Label(start_frame, text="Wielkość problemu: ").grid(column=0, row=4, sticky="w")
-problem_size = IntVar()
-ttk.Entry(start_frame, textvariable=problem_size, width=10).grid(column=1, row=4)
+        labels_and_vars = [
+            ("Wielkość populacji: ", self.population_size),
+            ("Ilość iteracji: ", self.iteration_limit),
+            ("Wielkość problemu: ", self.problem_size),
+            ("Prawdopo. mutacji: ", self.mutation_probability),
+        ]
 
-ttk.Label(start_frame, text="Prawdopo. mutacji: ").grid(column=0, row=5, sticky="w")
-mutation_probability = IntVar()
-ttk.Entry(start_frame, textvariable=mutation_probability, width=10).grid(column=1, row=5)
+        for i, (label, var) in enumerate(labels_and_vars, start=2):
+            ttk.Label(start_frame, text=label).grid(column=0, row=i, sticky="w")
+            ttk.Entry(start_frame, textvariable=var, width=10).grid(column=1, row=i)
 
-ttk.Label(start_frame, text="Prawdopo. krzyżowania: ").grid(column=0, row=6, sticky="w")
-crossover_probability = IntVar()
-ttk.Entry(start_frame, textvariable=crossover_probability, width=10).grid(column=1, row=6)
+    def _create_option_frames(self):
+        mutation_options = [
+            ("Mutacja podstawowa", BooleanVar(name='basic_mutation')),
+            ("Mutacja terytorialna", BooleanVar(name='territorial_mutation')),
+            ("Mutacja permutacyjna", BooleanVar(name='permutation_mutation')),
+            ("Mutacja maksymalnej nagrody", BooleanVar(name='max_reward_mutation')),
+            ("Mutacja ekspansji", BooleanVar(name='expansion_mutation')),
+        ]
 
-ttk.Label(start_frame, text="Prawdopo. selekcji: ").grid(column=0, row=7, sticky="w")
-selection_probability = IntVar()
-ttk.Entry(start_frame, textvariable=selection_probability, width=10).grid(column=1, row=7)
+        crossover_options = [
+            ("Naive crossover", BooleanVar(name="naive_crossover")),
+            #("Single Point Crossover Random", BooleanVar(name='single_point_crossover_random')),
+            #("Single Point Matrix Crossover", BooleanVar(name='single_point_matrix_crossover')),
+            ("Single Point Crossover Vector", BooleanVar(name='single_point_crossover_vector')),
+            ("Multi Point Crossover Vector", BooleanVar(name='multi_point_crossover_vector')),
+            ("Uniform Crossover Naive", BooleanVar(name='uniform_crossover_naive')),
+        ]
 
-Button(content, text="Rysuj macierz", relief="raised", border=5, command=lambda: draw_matrix()).grid(column=0, row=4, columnspan=1, sticky="w")
+        selection_options = [
+            ("Selekcja ruletkowa", BooleanVar(name='roulette_selection')),
+            ("Selekcja elitarnych ruletkowa", BooleanVar(name='elitist_roulette_selection')),
+            ("Selekcja turniejowa", BooleanVar(name='tournament_selection')),
+            ("Selekcja elitarnych turniejowa", BooleanVar(name='elitist_tournament_selection')),
+        ]
 
-mutation_options = [
-    ("Mutacja podstawowa", BooleanVar()),
-    ("Mutacja terytorialna", BooleanVar()),
-    ("Mutacja permutacyjna", BooleanVar()),
-    ("Mutacja maksymalnej nagrody", BooleanVar()),
-    ("Mutacja ekspansji", BooleanVar()),
-]
+        self.options = [
+            self._create_option_frame("Rodzaj mutacji", mutation_options, row=1),
+            self._create_option_frame("Rodzaj krzyżowania", crossover_options, row=2),
+            self._create_option_frame("Rodzaj selekcji", selection_options, row=3),
+        ]
 
-crossover_options = [
-    ("Single Point Crossover Random", BooleanVar()),
-    ("Single Point Matrix Crossover", BooleanVar()),
-    ("Single Point Crossover Vector", BooleanVar()),
-    ("Multi Point Crossover Vector", BooleanVar()),
-    ("Uniform Crossover Naive", BooleanVar()),
-]
+    def _create_option_frame(self, title, options, row):
+        frame = ttk.Frame(self.content, borderwidth=5, height=150, width=self.SIDE_PANEL_WIDTH)
+        frame.grid(column=3, row=row, columnspan=2, sticky="nswe")
+        ttk.Label(frame, text=title).grid(column=0, row=0, columnspan=2)
+        ttk.Separator(frame, orient="horizontal").grid(column=0, row=1, columnspan=2, sticky="we")
 
-selection_options = [
-    ("Selekcja ruletkowa", BooleanVar()),
-    ("Selekcja elitarnych ruletkowa", BooleanVar()),
-    ("Selekcja turniejowa", BooleanVar()),
-    ("Selekcja elitarnych turniejowa", BooleanVar()),
-]
+        for i, (text, variable) in enumerate(options, start=2):
+            ttk.Checkbutton(frame, text=text, variable=variable).grid(column=0, row=i, sticky="nswe")
 
-options = [
-    create_option_frame(content, "Opcje mutacji", mutation_options, row=1),
-    create_option_frame(content, "Opcje krzyżowania", crossover_options, row=2),
-    create_option_frame(content, "Opcje selekcji", selection_options, row=3),
-]
+        return options
 
-Button(content, text="Start", relief="raised", border=5, command=lambda: start(options)).grid(column=3, row=4, columnspan=2, sticky="we")
+    def _create_buttons(self):
+        Button(
+            self.content, text="Rysuj macierz", relief="raised", border=5,
+            command=self.draw_matrix
+        ).grid(column=0, row=4, columnspan=1, sticky="we")
 
-def on_close():
-    root.quit()
-    root.destroy()
+        Button(
+            self.content, text="Wykres", relief="raised", border=5,
+            command=self._on_plot_button
+        ).grid(column=1, row=4, columnspan=1, sticky="we")
 
-root.protocol("WM_DELETE_WINDOW", on_close)
+        self.state_label = ttk.Label(
+            self.content, text=self.state_label_text
+        )
+        self.state_label.grid(column=2, row=4, columnspan=1)
 
-root.mainloop()
+        Button(
+            self.content, text="Start", relief="raised", border=5,
+            command=self._on_start_button
+        ).grid(column=3, row=4, columnspan=2, sticky="we")
+
+
+
+    def draw_matrix(self):
+        self._update_state_label('Stan: Praca')
+
+        n = self.problem_size.get()
+        fig, ax = plt.subplots(figsize=(10, 10))
+
+        for i in range(n):
+            ax.plot([0, n-1], [i, i], color='black', lw=1)
+        for i in range(n):
+            ax.plot([i, i], [0, n-1], color='black', lw=1)
+        for i in range(n):
+            for j in range(n):
+                ax.scatter(j, i, color='black', s=10)
+
+        if self.best_result:
+            for point in self.best_result.vector:
+                ax.scatter(point[0],point[1], color='red', s=50)    
+
+        ax.set_xlim(-0.5, n + 0.5)
+        ax.set_ylim(-0.5, n + 0.5)
+        ax.set_aspect('equal')
+        ax.axis('off')
+
+        canvas = FigureCanvasTkAgg(fig, master=self.matrix_space)
+        canvas.draw()
+        canvas.get_tk_widget().place(x=0, y=0, width=self.LEFT_SIZE[0], height=self.LEFT_SIZE[1])
+
+        if len(self.bests)>0:
+            self._update_state_label('Stan: rezultaty dostepne')
+        else:
+            self._update_state_label('Stan: Brak rezultatów')
+
+    def _on_start_button(self):
+        self._update_state_label('Stan: Praca')
+
+        if self.on_start_callback:
+            
+            mutations = [item[1]._name for item in self.options[0] if item[1].get() is True]
+            crossovers = [item[1]._name for item in self.options[1] if item[1].get() is True]
+            selections = [item[1]._name for item in self.options[2] if item[1].get() is True]
+
+        self.on_start_callback({
+            "population_size": self.population_size.get(),
+            "iteration_limit": self.iteration_limit.get(),
+            "problem_size": self.problem_size.get(),
+            "mutation_probability": self.mutation_probability.get(),
+            "crossover_probability": self.crossover_probability.get(),
+            "selection_probability": self.selection_probability.get(),
+            "mutations": mutations, 
+            "crossovers": crossovers,
+            "selection": selections, 
+        })
+            
+        
+
+    def _on_plot_button(self):
+        if not len(self.bests)>0 or not len(self.avgs)>0 or not len(self.worsts)>0:
+            self._update_state_label('Stan: Brak rezultatów')
+           
+            print("No results to plot.")
+            return
+
+        self._update_state_label('Stan: Praca')
+
+        fig, ax = plt.subplots(figsize=(10, 10))
+
+        fig, ax = plt.subplots()
+        ax.plot(self.bests, label="Najlepszy")
+        ax.plot(self.avgs, label="Średni")
+        ax.plot(self.worsts, label="Najgorszy")
+        ax.legend()
+        ax.grid(True)
+        ax.set_title("Przebieg algorytmu")
+        ax.set_xlabel("Generacja numer")
+        ax.set_ylabel("Fitness")
+
+        canvas = FigureCanvasTkAgg(fig, master=self.matrix_space)
+        canvas.draw()
+        canvas.get_tk_widget().place(x=0, y=0, width=self.LEFT_SIZE[0], height=self.LEFT_SIZE[1])
+
+        self._update_state_label('Stan: rezultaty dostepne')
+        
+
+    def _on_escape(self, event=None):
+        self.root.quit()
+        self.root.destroy()
+
+    def _update_state_label(self, update_text):
+        self.state_label.config(text=update_text)
