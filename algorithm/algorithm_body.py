@@ -1,5 +1,6 @@
 import random
 import numpy as np
+import dill as pickle
 
 from data_structures.problem_structure import Problem, Solution, Tile
 from algorithm.genetic_functions import (
@@ -14,8 +15,10 @@ from algorithm.genetic_functions import (
     permutation_mutation,
     max_reward_mutation,
     expansion_mutation,
-    mutate_to_legal
+    mutate_to_legal,
+    greedy_crossover
 )
+
 
 # Nie wiem jak inaczej zrobić to tak żeby z main przekazywać liste funkcji
 
@@ -60,9 +63,9 @@ class GeneticAlgorithm:
     """
 
     def __init__(self,
-                crossover_types: list = None, #
+                crossover_probs: list = None, #
                 selection_types: list = None, #
-                mutation_types: list = None,
+                mutation_probs: list = None,
                 mutation_probability: float = 0.1,
                 first_population: list = None, 
                 population_size: int = 1000,
@@ -70,25 +73,28 @@ class GeneticAlgorithm:
                 problem: Problem = None,
                 leave_parents: bool = True,
                 elite_percentage: int = 10,
+                load_population: bool = False,
                 interrupt_flag= False):
         
-        if not crossover_types:
-            self.crossover_types = [naive_crossover]
+        self.crossover_types = [naive_crossover, single_point_crossover_vector, multi_point_crossover_vector, greedy_crossover]
+        if not crossover_probs:
+            self.crossover_probs = [1, 0, 0, 0]
         else:
-            self.crossover_types = get_function_list(crossover_types, function_map)
+            self.crossover_probs = crossover_probs
             
         if not selection_types:
             self.selection_types = [elitism_selection]
         else:
             self.selection_types = get_function_list(selection_types, function_map)
         
-        if not mutation_types:
-            self.mutation_types = [basic_mutation]
+        self.mutation_types = [basic_mutation, territorial_mutation, permutation_mutation, max_reward_mutation, expansion_mutation]
+        if not mutation_probs:
+            self.mutation_probs = [1, 0, 0, 0, 0]
         else:            
-            self.mutation_types = get_function_list(mutation_types, function_map)
+            self.mutation_probs = mutation_probs
   
         if problem is None:
-            self.problem = Problem(self.mutation_types, basic_mutation=basic_mutation, mutate_to_legal=mutate_to_legal)
+            self.problem = Problem(mutation_functions=self.mutation_types, mutation_probs=self.mutation_probs, basic_mutation=basic_mutation, mutate_to_legal=mutate_to_legal)
         else:
             self.problem = problem
 
@@ -102,15 +108,19 @@ class GeneticAlgorithm:
         self.leave_parents = leave_parents
         self.elite_percentage = elite_percentage
         self.interrupt_flag = interrupt_flag
+        self.load_population = load_population
 
     def run(self):
         global should_interrupt
 
-        if not self.first_population:
+        if not self.load_population:
             self.population = self.generate_first_population(self.problem.n, self.population_size)
+            with open("current_first_population.pkl", 'wb') as f:
+                pickle.dump(self.population, f)
         else:
-            self.population = self.first_population
-        
+            with open("current_first_population.pkl", 'rb') as f:
+                self.population = pickle.load(f)
+         
         # Aktualizujemy "wartość" każdego rozwiązania w populacji
         for solution in self.population:
             solution.evaluate_function()
@@ -226,7 +236,7 @@ class GeneticAlgorithm:
         #### Funkcja krzyzująca
         ----------
         """
-        operation = random.choices(self.crossover_types, k=1)[0]
+        operation = random.choices(self.crossover_types, weights=self.crossover_probs, k=1)[0]
         return(operation(parent_1, parent_2))
     
     def selection_method(self):

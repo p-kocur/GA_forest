@@ -1,4 +1,4 @@
-from tkinter import BooleanVar, IntVar, ttk, Tk, Button, Toplevel
+from tkinter import BooleanVar, IntVar, DoubleVar, ttk, Tk, Button, Toplevel
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
@@ -26,8 +26,11 @@ class GeneticAlgorithmGUI:
         self.population_size = IntVar(value=100)
         self.iteration_limit = IntVar(value=500)
         self.problem_size = IntVar(value=40)
-        self.mutation_probability = IntVar(value=0.5)
+        self.n_elements = IntVar(value=20)
         self.elite_percent = IntVar(value=30)
+        self.mutation_probability = DoubleVar(value=0.5)
+        self.new_problem = BooleanVar(value=True)
+        self.use_last_population = BooleanVar(value=False)
 
         self.options = []
 
@@ -62,29 +65,34 @@ class GeneticAlgorithmGUI:
 
         labels_and_vars = [
             ("Wielkość populacji: ", self.population_size),
-            ("Ilość iteracji: ", self.iteration_limit),
+            ("Liczba iteracji: ", self.iteration_limit),
             ("Wielkość problemu: ", self.problem_size),
-            ("Prawdopo. mutacji: ", self.mutation_probability),
-            ("Procent elity: ", self.elite_percent)
+            ("Liczba elementów rozw.: ", self.n_elements),
+            ("Procent elity: ", self.elite_percent),
+            ("Prawdopo. mutacji: ", self.mutation_probability)
         ]
 
         for i, (label, var) in enumerate(labels_and_vars, start=2):
             ttk.Label(start_frame, text=label).grid(column=0, row=i, sticky="w")
             ttk.Entry(start_frame, textvariable=var, width=10).grid(column=1, row=i)
+            
+        ttk.Checkbutton(start_frame, text="Nowy problem", variable=self.new_problem).grid(column=0, row=8, columnspan=1, sticky="w")
+        ttk.Checkbutton(start_frame, text="Użyj ostatniej populacji", variable=self.use_last_population).grid(column=0, row=9, columnspan=1, sticky="w")
 
     def _create_option_frames(self):
         mutation_options = [
-            ("Mutacja podstawowa", BooleanVar(name='basic_mutation')),
-            ("Mutacja terytorialna", BooleanVar(name='territorial_mutation')),
-            ("Mutacja permutacyjna", BooleanVar(name='permutation_mutation')),
-            ("Mutacja maksymalnej nagrody", BooleanVar(name='max_reward_mutation')),
-            ("Mutacja ekspansji", BooleanVar(name='expansion_mutation')),
+            ("Mutacja podstawowa", IntVar(name='basic_mutation')), 
+            ("Mutacja terytorialna", IntVar(name='territorial_mutation')),
+            ("Mutacja permutacyjna", IntVar(name='permutation_mutation')),
+            ("Mutacja maksymalnej nagrody", IntVar(name='max_reward_mutation')),
+            ("Mutacja ekspansji", IntVar(name='expansion_mutation')),
         ]
 
         crossover_options = [
-            ("Krzyżowanie losowe", BooleanVar(name="naive_crossover")),
-            ("Krzyżowanie jednopunktowe", BooleanVar(name='single_point_crossover_vector')),
-            ("Krzyżowanie wielopunktowe", BooleanVar(name='multi_point_crossover_vector'))
+            ("Krzyżowanie losowe", IntVar(name="naive_crossover")),
+            ("Krzyżowanie jednopunktowe", IntVar(name='single_point_crossover_vector')),
+            ("Krzyżowanie wielopunktowe", IntVar(name='multi_point_crossover_vector')),
+            ("Krzyżowanie zachłanne", IntVar(name='greeedy_crossover'))
         ]
 
         selection_options = [
@@ -94,8 +102,8 @@ class GeneticAlgorithmGUI:
         ]
 
         self.options = [
-            self._create_option_frame("Rodzaj mutacji", mutation_options, row=1),
-            self._create_option_frame("Rodzaj krzyżowania", crossover_options, row=2),
+            self._create_option_frame_numerical("Rodzaj mutacji / prawdopodobieństwo", mutation_options, row=1),
+            self._create_option_frame_numerical("Rodzaj krzyżowania / prawdopodobieństwo", crossover_options, row=2),
             self._create_option_frame("Rodzaj selekcji", selection_options, row=3),
         ]
 
@@ -107,6 +115,18 @@ class GeneticAlgorithmGUI:
 
         for i, (text, variable) in enumerate(options, start=2):
             ttk.Checkbutton(frame, text=text, variable=variable).grid(column=0, row=i, sticky="nswe")
+
+        return options
+    
+    def _create_option_frame_numerical(self, title, options, row):
+        frame = ttk.Frame(self.content, borderwidth=5, height=150, width=self.SIDE_PANEL_WIDTH)
+        frame.grid(column=3, row=row, columnspan=2, sticky="nswe")
+        ttk.Label(frame, text=title).grid(column=0, row=0, columnspan=2)
+        ttk.Separator(frame, orient="horizontal").grid(column=0, row=1, columnspan=2, sticky="we")
+
+        for i, (text, variable) in enumerate(options, start=2):
+            ttk.Label(frame, text=text).grid(column=0, row=i, sticky="w")
+            ttk.Entry(frame, textvariable=variable, width=10).grid(column=1, row=i)
 
         return options
 
@@ -170,10 +190,12 @@ class GeneticAlgorithmGUI:
 
         if self.on_start_callback:
             
-            mutations = [item[1]._name for item in self.options[0] if item[1].get() is True]
-            crossovers = [item[1]._name for item in self.options[1] if item[1].get() is True]
+            mutations = [item[1].get() for item in self.options[0]]
+            crossovers = [item[1].get() for item in self.options[1]]
             selections = [item[1]._name for item in self.options[2] if item[1].get() is True]
 
+        print("P. mutacji:")
+        print(self.mutation_probability.get())
         self.on_start_callback({
             "population_size": self.population_size.get(),
             "iteration_limit": self.iteration_limit.get(),
@@ -183,6 +205,9 @@ class GeneticAlgorithmGUI:
             "mutations": mutations, 
             "crossovers": crossovers,
             "selection": selections, 
+            "new_problem": self.new_problem.get(),
+            "use_last_population": self.use_last_population.get(),
+            "n_elements": self.n_elements.get()
         })
             
         

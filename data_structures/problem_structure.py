@@ -39,7 +39,7 @@ class Problem():
     self.mutation_functions: lista funkcji mutacji,
     self.mutation_probs: lista prawdopodobieństw wyboru funkcji mutacji.
     '''
-    def __init__(self, mutation_functions: list, basic_mutation: callable, mutate_to_legal: callable, size: tuple[int] = (30, 30), n: int = 40, wage: float = 600, our_workers: int = 50, weather_prob: callable = lambda i: i * 1/20, penalty: float = 5000):
+    def __init__(self, mutation_functions : list,mutation_probs: list, basic_mutation: callable, mutate_to_legal: callable, size: tuple[int] = (30, 30), n: int = 40, wage: float = 600, our_workers: int = 50, weather_prob: callable = None, penalty: float = 5000):
         # Klasa Problem automatycznie generuje swoje atrybuty przy inicjalizacji.
         # Aby wgrać swój problem należy skorzystać z odpowiednich metod.
         self.n = n
@@ -53,8 +53,14 @@ class Problem():
         self.a_workers = int(our_workers * 0.3)
         self.b_workers = int(our_workers * 0.2)
         self.mutation_functions = mutation_functions
+        self.mutation_probs = mutation_probs
         self.basic_mutation = basic_mutation
         self.mutate_to_legal = mutate_to_legal
+        
+        if weather_prob is None:
+            self.weather_prob = lambda i: i * 1/(self.n+1)
+        else:
+            self.weather_prob = weather_prob
 
         self.matrix = []
 
@@ -95,13 +101,13 @@ class Solution():
         self._perform_mutation()
 
     def _perform_mutation(self):
-        mutation_function = random.choices(self.problem.mutation_functions, k=1)[0]
+        mutation_function = random.choices(self.problem.mutation_functions, weights=self.problem.mutation_probs, k=1)[0]
         i = mutation_function(self)
         
         # Jeśli po zastosowaniu mutacji uzyskaliśmy nielegalne rozwiązanie, 50 razy próbujemy zastosować mutację podstawową (losową).
         # Jeśli nie uzyskamy legalnego rozwiązania, znajdujemy najbliższe możliwe rozwiązanie, używając funkcji mutate_to_legal
         counter = 0
-        while not self.is_legal() and counter < 50:
+        while not self.is_legal():
             if counter < 10:
                 self.problem.basic_mutation(self, i)
             else:

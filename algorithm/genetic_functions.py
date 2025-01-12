@@ -294,6 +294,37 @@ def multi_point_crossover_vector(parent_1: 'Solution', parent_2: 'Solution', n_p
     
     return child
 
+def greedy_crossover(parent_1: 'Solution', parent_2: 'Solution') -> 'Solution':
+    """
+    #### Krzyżowanie zachłanne - wybiera elementy o największym zysku i najmniejszym koszcie transportu
+    ----------
+    #### Parametry
+    ----------
+    parent_1: Solution, rodzic 1
+    parent_2: Solution, rodzic 2
+    return: Solution, dziecko
+
+    Schemat rozwiązania:
+    Na każdym etapie wybiera element o największym zysku i najmniejszym koszcie transportu.
+    """
+    child_vector = []
+    for i in range(len(parent_1.vector)):
+        x1, y1 = parent_1.vector[i]
+        x2, y2 = parent_2.vector[i]
+        if parent_1.problem.matrix[x1][y1].reward - parent_1.problem.matrix[x1][y1].transport_cost > parent_2.problem.matrix[x2][y2].reward - parent_2.problem.matrix[x2][y2].transport_cost:
+            child_vector.append(parent_1.vector[i])
+        else:
+            child_vector.append(parent_2.vector[i])
+            
+    child = Solution(vector=child_vector, problem=parent_1.problem)
+
+    while not child.is_legal() or len(child.vector) != len(set(child.vector)):
+        basic_mutation(child)
+
+    child.evaluate_function()
+    
+    return child
+
 
 """
 ------------------------
