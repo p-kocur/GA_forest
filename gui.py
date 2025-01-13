@@ -1,6 +1,7 @@
 from tkinter import BooleanVar, IntVar, DoubleVar, ttk, Tk, Button, Toplevel
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import numpy as np
 
 class GeneticAlgorithmGUI:
     def __init__(self, root, on_start_callback=None):
@@ -157,7 +158,7 @@ class GeneticAlgorithmGUI:
         self._update_state_label('Stan: Praca')
 
         n = self.problem_size.get()
-        fig, ax = plt.subplots(figsize=(10, 10))
+        '''fig, ax = plt.subplots(figsize=(10, 10))
 
         for i in range(n):
             ax.plot([0, n-1], [i, i], color='black', lw=1)
@@ -174,7 +175,35 @@ class GeneticAlgorithmGUI:
         ax.set_xlim(-0.5, n + 0.5)
         ax.set_ylim(-0.5, n + 0.5)
         ax.set_aspect('equal')
-        ax.axis('off')
+        ax.axis('off')'''
+        
+        data = np.zeros((n, n))
+        data[:] = np.nan
+        if self.best_result:
+            for i, point in enumerate(self.best_result.vector):
+                data[point[0], point[1]] = i
+                
+        data_color = np.zeros((n, n))
+        for i in range(n):
+            for j in range(n):
+                data_color[i, j] = self.best_result.problem.matrix[i][j].reward
+        
+        # Create a matplotlib figure
+        fig, ax = plt.subplots(figsize=(7,7))
+        cax = ax.matshow(data_color, cmap="summer")
+        
+        colorbar = fig.colorbar(cax, ax=ax, fraction=0.046, pad=0.04)
+        colorbar.set_label('Wartość drewna', fontsize=12)  # Label for the colorbar
+
+        # Annotate the cells with data
+        for i in range(n):
+            for j in range(n):
+                if not self.best_result or (i, j) in self.best_result.vector:
+                    ax.text(j, i, f"{int(data[i, j])}", va='center', ha='center', color="black", fontsize=self.LEFT_SIZE[1]//(2.3*n))
+
+        # Remove axes ticks
+        ax.set_xticks([])
+        ax.set_yticks([])
 
         canvas = FigureCanvasTkAgg(fig, master=self.matrix_space)
         canvas.draw()
