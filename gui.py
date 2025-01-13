@@ -32,6 +32,10 @@ class GeneticAlgorithmGUI:
         self.mutation_probability = DoubleVar(value=0.5)
         self.new_problem = BooleanVar(value=True)
         self.use_last_population = BooleanVar(value=False)
+        
+        self.button1 = None
+        self.button2 = None
+        self.button3 = None
 
         self.options = []
 
@@ -152,9 +156,7 @@ class GeneticAlgorithmGUI:
             command=self._on_start_button
         ).grid(column=3, row=4, columnspan=2, sticky="we")
 
-
-
-    def draw_matrix(self):
+    def draw_matrix(self, scale="cost"):
         self._update_state_label('Stan: Praca')
 
         n = self.problem_size.get()
@@ -184,35 +186,70 @@ class GeneticAlgorithmGUI:
                 data[point[0], point[1]] = i
                 
         data_color = np.zeros((n, n))
-        for i in range(n):
-            for j in range(n):
-                data_color[i, j] = self.best_result.problem.matrix[i][j].reward
+        title = ""
+        if self.best_result:
+            if scale == "cost":
+                title = "Cena drewna"
+                for i in range(n):
+                    for j in range(n):
+                        data_color[i, j] = self.best_result.problem.matrix[i][j].reward
+            elif scale == "weather":
+                title = "Kara pogodowa"
+                for i in range(n):
+                    for j in range(n):
+                        data_color[i, j] = self.best_result.problem.matrix[i][j].weather_affection
+            elif scale == "workers":
+                title = "Liczba pracowników"
+                for i in range(n):
+                    for j in range(n):
+                        data_color[i, j] = self.best_result.problem.matrix[i][j].workers_required
+            
         
-        # Create a matplotlib figure
         fig, ax = plt.subplots(figsize=(7,7))
         cax = ax.matshow(data_color, cmap="summer")
         
         colorbar = fig.colorbar(cax, ax=ax, fraction=0.046, pad=0.04)
-        colorbar.set_label('Wartość drewna', fontsize=12)  # Label for the colorbar
+        colorbar.set_label(title, fontsize=12)
 
-        # Annotate the cells with data
         for i in range(n):
             for j in range(n):
-                if not self.best_result or (i, j) in self.best_result.vector:
+                if self.best_result and (i, j) in self.best_result.vector:
                     ax.text(j, i, f"{int(data[i, j])}", va='center', ha='center', color="black", fontsize=self.LEFT_SIZE[1]//(2.3*n))
 
-        # Remove axes ticks
         ax.set_xticks([])
         ax.set_yticks([])
 
         canvas = FigureCanvasTkAgg(fig, master=self.matrix_space)
         canvas.draw()
         canvas.get_tk_widget().place(x=0, y=0, width=self.LEFT_SIZE[0], height=self.LEFT_SIZE[1])
+        
+        self.button1 = Button(
+            self.content, text="Pokaż cenę drewna", relief="raised", border=5,
+            command=lambda:[plt.close(fig), self.draw_matrix]
+        )
+        self.button2 = Button(
+            self.content, text="Pokaż karę pogodową", relief="raised", border=5,
+            command=lambda:[plt.close(fig), self.draw_matrix("weather")]
+        )
+        self.button3 = Button(
+            self.content, text="Pokaż wymaganą liczbę pracowników", relief="raised", border=5,
+            command=lambda:[plt.close(fig), self.draw_matrix("workers")]
+        )
+        
+        self.button1.grid(column=0, row=0, columnspan=1, sticky="nw")
+        self.button2.grid(column=1, row=0, columnspan=1, sticky="nw")
+        self.button3.grid(column=2, row=0, columnspan=1, sticky="nw")
 
         if len(self.bests)>0:
             self._update_state_label('Stan: rezultaty dostepne')
         else:
             self._update_state_label('Stan: Brak rezultatów')
+            
+    def hide_buttons(self):
+        if self.button1:
+            self.button1.grid_forget()
+            self.button2.grid_forget()
+            self.button3.grid_forget()
 
     def _on_start_button(self):
         self._update_state_label('Stan: Praca')
@@ -223,8 +260,6 @@ class GeneticAlgorithmGUI:
             crossovers = [item[1].get() for item in self.options[1]]
             selections = [item[1]._name for item in self.options[2] if item[1].get() is True]
 
-        print("P. mutacji:")
-        print(self.mutation_probability.get())
         self.on_start_callback({
             "population_size": self.population_size.get(),
             "iteration_limit": self.iteration_limit.get(),
@@ -242,6 +277,7 @@ class GeneticAlgorithmGUI:
         
 
     def _on_plot_button(self):
+        self.hide_buttons()
         if not len(self.bests)>0 or not len(self.avgs)>0 or not len(self.worsts)>0:
             self._update_state_label('Stan: Brak rezultatów')
            
