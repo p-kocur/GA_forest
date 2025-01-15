@@ -208,6 +208,7 @@ class GeneticAlgorithmGUI:
         fig, ax = plt.subplots(figsize=(7,7))
         cax = ax.matshow(data_color, cmap="summer")
         
+        ax.set_title(f"Wartość funkcji celu: {int(self.best_result.fitness)}", fontsize=12)
         colorbar = fig.colorbar(cax, ax=ax, fraction=0.046, pad=0.04)
         colorbar.set_label(title, fontsize=12)
 
@@ -225,7 +226,7 @@ class GeneticAlgorithmGUI:
         
         self.button1 = Button(
             self.content, text="Pokaż cenę drewna", relief="raised", border=5,
-            command=lambda:[plt.close(fig), self.draw_matrix]
+            command=lambda:[plt.close(fig), self.draw_matrix("cost")]
         )
         self.button2 = Button(
             self.content, text="Pokaż karę pogodową", relief="raised", border=5,

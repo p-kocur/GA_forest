@@ -18,7 +18,7 @@ class Tile():
         self.workers_required = workers_required
         self.reward = reward
         # Jak przeszkadza pogoda
-        self.weather_affection = random.choice([500, 1000, 1500, 3000])
+        self.weather_affection = random.choice(range(0, 100, 5))
  
 class Problem():
     '''
@@ -58,7 +58,7 @@ class Problem():
         self.mutate_to_legal = mutate_to_legal
         
         if weather_prob is None:
-            self.weather_prob = lambda i: i * 1/(self.n+1)
+            self.weather_prob = lambda i, aff: np.exp(aff + i)/np.exp(100+self.n)
         else:
             self.weather_prob = weather_prob
 
@@ -130,7 +130,7 @@ class Solution():
             paid_wages = our_workers*self.problem.wage + a_workers*self.problem.a_wage + b_workers*self.problem.b_wage
             
             # Koszty poniesione z powodu warunków pogodowych 
-            w_cost = self.problem.weather_prob(i)*(self.problem.penalty+xy_tile.weather_affection)
+            w_cost = self.problem.weather_prob(i, xy_tile.weather_affection)*self.problem.penalty
             
             # Ostatecznie wyliczamy wartość funkcji celu
             j += xy_tile.reward - xy_tile.transport_cost - w_cost - paid_wages
