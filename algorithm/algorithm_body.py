@@ -215,6 +215,7 @@ class GeneticAlgorithm:
         """
         new_population = []
 
+        
         # Proces krzyżowania
         if self.leave_parents:
             new_population = selected_population.copy()
