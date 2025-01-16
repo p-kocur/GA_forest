@@ -18,7 +18,7 @@ class Tile():
         self.workers_required = workers_required
         self.reward = reward
         # Jak przeszkadza pogoda
-        self.weather_affection = random.choice(range(0, 100, 5))
+        self.weather_affection = random.choice(range(0, 100, 1))
  
 class Problem():
     '''
@@ -39,7 +39,7 @@ class Problem():
     self.mutation_functions: lista funkcji mutacji,
     self.mutation_probs: lista prawdopodobieństw wyboru funkcji mutacji.
     '''
-    def __init__(self, mutation_functions : list,mutation_probs: list, basic_mutation: callable, mutate_to_legal: callable, size: tuple[int] = (30, 30), n: int = 40, wage: float = 600, our_workers: int = 50, weather_prob: callable = None, penalty: float = 5000):
+    def __init__(self, mutation_functions : list,mutation_probs: list, basic_mutation: callable, mutate_to_legal: callable, size: tuple[int] = (30, 30), n: int = 40, wage: float = 100, our_workers: int = 20, weather_prob: callable = None, penalty: float = 250):
         # Klasa Problem automatycznie generuje swoje atrybuty przy inicjalizacji.
         # Aby wgrać swój problem należy skorzystać z odpowiednich metod.
         self.n = n
@@ -58,7 +58,7 @@ class Problem():
         self.mutate_to_legal = mutate_to_legal
         
         if weather_prob is None:
-            self.weather_prob = lambda i, aff: np.exp(aff + i)/np.exp(100+self.n)
+            self.weather_prob = lambda i, aff: np.exp(aff/10 + i/2)/np.exp(10+self.n/2)
         else:
             self.weather_prob = weather_prob
 
@@ -67,10 +67,10 @@ class Problem():
         for i in range(size[0]):
             self.matrix.append([])
             for j in range(size[1]):
-                workers_required = random.choice(range(our_workers, int(our_workers*1.5)))
-                reward = workers_required * random.choice(range(620, 770, 10))
+                workers_required = random.choice(range(int(our_workers//1.1), int(our_workers*1.5)))
+                reward = workers_required * random.choice(range(85, 130, 1))
                 # Koszt transportu jest proporcjonalny do odległości pola od lewego górnego rogu macierzy lasu.
-                self.matrix[i].append(Tile(transport_cost=50*(i+j+1), workers_required=workers_required, reward=reward))
+                self.matrix[i].append(Tile(transport_cost=10*(i+j+1), workers_required=workers_required, reward=reward))
             
     def load(self, matrix: list[list[Union[float, int]]]):
         '''
@@ -95,7 +95,10 @@ class Solution():
         self.size = len(vector)
         self.problem = problem
         self.vector = vector 
+        self.a_discount = 0.05 * self.problem.a_wage
+        self.b_discount = 0.05 * self.problem.b_wage
         self.fitness = self.evaluate_function()
+        
 
     def mutation(self):
         self._perform_mutation()
@@ -116,18 +119,37 @@ class Solution():
 
     def evaluate_function(self):
         j = 0
+        a_worked_yesterday = False
+        b_worked_yesterday = False
         for xy, i in zip(self.vector, range(len(self.vector))):
             x, y = xy
             xy_tile = self.problem.matrix[x][y]
             # Ilu wykorzystamy naszych pracowników
             our_workers = min(self.problem.our_workers, xy_tile.workers_required)
-            # Ilu wykorzystamy pracowników klasy A
-            a_workers = min(xy_tile.workers_required % self.problem.our_workers, self.problem.a_workers) 
-            # Ilu wykorzystamy pracowników klasy B
-            b_workers = xy_tile.workers_required % (self.problem.our_workers + a_workers)
+            if our_workers < xy_tile.workers_required:
+                # Ilu wykorzystamy pracowników klasy A
+                a_workers = min(xy_tile.workers_required % self.problem.our_workers, self.problem.a_workers)
+            else:
+                a_workers = 0
+            if a_workers + our_workers < xy_tile.workers_required:
+                # Ilu wykorzystamy pracowników klasy B
+                b_workers = xy_tile.workers_required % (self.problem.our_workers + a_workers)
+            else:
+                b_workers = 0
+            # Koszt poniesiony przy wypłatach, pamiętając o zniżkach
+            paid_wages = (our_workers*self.problem.wage + a_workers*(self.problem.a_wage-int(a_worked_yesterday)*self.a_discount) 
+                          + b_workers*(self.problem.b_wage-int(b_worked_yesterday)*self.b_discount))
             
-            # Koszt poniesiony przy wypłatach
-            paid_wages = our_workers*self.problem.wage + a_workers*self.problem.a_wage + b_workers*self.problem.b_wage
+            # Aktualizujemy promocje
+            if a_workers > 0:
+                a_worked_yesterday = True
+            else:
+                a_worked_yesterday = False
+                
+            if b_workers > 0:
+                b_worked_yesterday = True
+            else:
+                b_worked_yesterday = False
             
             # Koszty poniesione z powodu warunków pogodowych 
             w_cost = self.problem.weather_prob(i, xy_tile.weather_affection)*self.problem.penalty
