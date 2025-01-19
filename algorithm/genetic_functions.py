@@ -365,33 +365,42 @@ def roulette_selection(population: list, percentage: int = 20) -> list:
     a następnie losowo wybieramy rozwiązanie na podstawie tych prawdopodobieństw.
     """
         
-    num_select = int(len(population)*(percentage/100))
 
-    population.sort(key=lambda x: x.fitness, reverse=True)
+
+    num_select = int(len(population) * (percentage / 100))
     next_population = []
+
+    elite_count = max(1, int(num_select * (percentage / 100)))
+    elites = sorted(population, key=lambda x: x.fitness, reverse=True)[:elite_count]
+    population = [individual for individual in population if individual not in elites]
+    next_population.extend(elites)
+    num_select = num_select - elite_count
+
     total_fitness = sum(solution.fitness for solution in population)
 
-    cumulative_fitness = []
-    c_fitness = 0
+    probabilities = [solution.fitness / total_fitness for solution in population]
 
-    for solution in population:
-        c_fitness += solution.fitness
-        cumulative_fitness.append(c_fitness)
 
-    for _ in range(0, num_select):
 
-        selection_point = random.uniform(0, total_fitness)
 
-        for index, c_fit in enumerate(cumulative_fitness):
-            if c_fit >= selection_point:
+    for _ in range(num_select):
+        # Perform roulette selection
+        selection_point = random.uniform(0, sum(probabilities))
+        cumulative_probability = 0
+
+        for index, probability in enumerate(probabilities):
+            cumulative_probability += probability
+            if cumulative_probability >= selection_point:
                 next_population.append(population[index])
-                for i in range(index+1, len(population)):
-                    cumulative_fitness[i] -= population[index].fitness
+                # Remove selected individual from population and probabilities
+                population.pop(index)
+                probabilities.pop(index)
                 break
-            
-        population.pop(index)
-        cumulative_fitness.pop(index)
 
+        # Recalculate probabilities for the remaining population
+        if population:  # Ensure the population is not empty
+            total_fitness = sum(solution.fitness for solution in population)
+            probabilities = [solution.fitness / total_fitness for solution in population]
 
     return next_population
 

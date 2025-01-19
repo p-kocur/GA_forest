@@ -86,18 +86,18 @@ class GeneticAlgorithmGUI:
 
     def _create_option_frames(self):
         mutation_options = [
-            ("Mutacja podstawowa", IntVar(name='basic_mutation')), 
-            ("Mutacja terytorialna", IntVar(name='territorial_mutation')),
-            ("Mutacja permutacyjna", IntVar(name='permutation_mutation')),
-            ("Mutacja maksymalnej nagrody", IntVar(name='max_reward_mutation')),
-            ("Mutacja ekspansji", IntVar(name='expansion_mutation')),
+            ("Mutacja podstawowa", DoubleVar(name='basic_mutation')), 
+            ("Mutacja terytorialna", DoubleVar(name='territorial_mutation')),
+            ("Mutacja permutacyjna", DoubleVar(name='permutation_mutation')),
+            ("Mutacja maksymalnej nagrody", DoubleVar(name='max_reward_mutation')),
+            ("Mutacja ekspansji", DoubleVar(name='expansion_mutation')),
         ]
 
         crossover_options = [
-            ("Krzyżowanie losowe", IntVar(name="naive_crossover")),
-            ("Krzyżowanie jednopunktowe", IntVar(name='single_point_crossover_vector')),
-            ("Krzyżowanie wielopunktowe", IntVar(name='multi_point_crossover_vector')),
-            ("Krzyżowanie zachłanne", IntVar(name='greeedy_crossover'))
+            ("Krzyżowanie losowe", DoubleVar(name="naive_crossover")),
+            ("Krzyżowanie jednopunktowe", DoubleVar(name='single_point_crossover_vector')),
+            ("Krzyżowanie wielopunktowe", DoubleVar(name='multi_point_crossover_vector')),
+            ("Krzyżowanie zachłanne", DoubleVar(name='greeedy_crossover'))
         ]
 
         selection_options = [
@@ -155,6 +155,12 @@ class GeneticAlgorithmGUI:
             self.content, text="Start", relief="raised", border=5,
             command=self._on_start_button
         ).grid(column=3, row=4, columnspan=2, sticky="we")
+
+    def add_button(self, command: callable):
+        Button(
+            self.content, text="Wczytaj", relief="raised", border=5,
+            command=command
+        ).grid(column=3, row=3, columnspan=2, sticky="swe") 
 
     def draw_matrix(self, scale="cost"):
         self._update_state_label('Stan: Praca')
@@ -237,14 +243,16 @@ class GeneticAlgorithmGUI:
             command=lambda:[plt.close(fig), self.draw_matrix("workers")]
         )
         
-        self.button1.grid(column=0, row=0, columnspan=1, sticky="nw")
-        self.button2.grid(column=1, row=0, columnspan=1, sticky="nw")
-        self.button3.grid(column=2, row=0, columnspan=1, sticky="nw")
+        self.button1.grid(column=0, row=0, columnspan=1, sticky="nwe")
+        self.button2.grid(column=1, row=0, columnspan=1, sticky="nwe")
+        self.button3.grid(column=2, row=0, columnspan=1, sticky="nwe")
 
         if len(self.bests)>0:
             self._update_state_label('Stan: rezultaty dostepne')
         else:
             self._update_state_label('Stan: Brak rezultatów')
+
+
             
     def hide_buttons(self):
         if self.button1:
