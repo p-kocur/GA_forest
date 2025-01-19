@@ -28,7 +28,7 @@ def main():
         Funkcja wywoływana przez przycisk "Start"
         '''
         
-        print(f"{parameters}\n")
+        print(f"Parametry uruchomienia:\n{parameters}\n")
 
         # Funkcja obsługująca prace algorytmu 
         def run_algorithm(starting_parameters, result_callback):
@@ -36,14 +36,24 @@ def main():
             Funkcja obsługująca prace algorytmu - tworzy klase GeneticAlgorithm i przekazuje rozwiązanie dalej
             Wywołuwana w odzielnym wątku. 
             '''
-            with open("problem.pkl", 'rb') as f:
-                problem = pickle.load(f)
-            if starting_parameters['new_problem']:
-                problem = Problem(size=[starting_parameters['problem_size'], starting_parameters['problem_size']], mutation_probs=starting_parameters['mutations'],
-                                  mutation_functions=[basic_mutation, permutation_mutation, territorial_mutation, max_reward_mutation, expansion_mutation],
-                                  mutate_to_legal=mutate_to_legal, basic_mutation=basic_mutation, n=starting_parameters['n_elements'])
+            nonlocal problem
+            # Jeżeli nie załadowano problemu wcześniej, to tworzymy nowy
+            if problem is None or starting_parameters.get('new_problem', False):
+                problem = Problem(
+                    size=[starting_parameters['problem_size'], starting_parameters['problem_size']],
+                    mutation_probs=starting_parameters['mutations'],
+                    mutation_functions=[basic_mutation, permutation_mutation, territorial_mutation, max_reward_mutation, expansion_mutation],
+                    mutate_to_legal=mutate_to_legal,
+                    basic_mutation=basic_mutation,
+                    n=starting_parameters['n_elements']
+                )
+                # Save the newly created problem
                 with open("problem.pkl", 'wb') as f:
                     pickle.dump(problem, f)
+            else:
+                print("Using the loaded problem instance.")
+
+            
             
             algorithm = GeneticAlgorithm(
                 crossover_probs=starting_parameters['crossovers'],
@@ -98,9 +108,22 @@ def main():
         should_interrupt.clear()  # Reset flagi przerwabnia
         print("Interrupt flag reset.")
 
+    def load_problem():
+        nonlocal problem
+        try:
+            with open("load_problem.pkl", 'rb') as f:
+                problem = pickle.load(f)
+            gui._update_state_label("Stan: załadowano")
+            print("Problem loaded successfully.")
+        except FileNotFoundError:
+            gui._update_state_label("Stan: nie znalezio")
+            print("Error: File not found.")
+
     # Uruchomienie GUI
     root = Tk()
     gui = GUI.GeneticAlgorithmGUI(root, on_start_callback=start_callback)
+
+    gui.add_button(load_problem)
     
     root.bind("<Escape>", interrupt_callback)
     root.bind("R", interrupt_reset)

@@ -156,6 +156,12 @@ class GeneticAlgorithmGUI:
             command=self._on_start_button
         ).grid(column=3, row=4, columnspan=2, sticky="we")
 
+    def add_button(self, command: callable):
+        Button(
+            self.content, text="Wczytaj", relief="raised", border=5,
+            command=command
+        ).grid(column=3, row=3, columnspan=2, sticky="swe") 
+
     def draw_matrix(self, scale="cost"):
         self._update_state_label('Stan: Praca')
 
@@ -245,6 +251,8 @@ class GeneticAlgorithmGUI:
             self._update_state_label('Stan: rezultaty dostepne')
         else:
             self._update_state_label('Stan: Brak rezultatów')
+
+
             
     def hide_buttons(self):
         if self.button1:
