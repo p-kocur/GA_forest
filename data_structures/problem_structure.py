@@ -95,8 +95,8 @@ class Solution():
         self.size = len(vector)
         self.problem = problem
         self.vector = vector 
-        self.a_discount = 0.05 * self.problem.a_wage
-        self.b_discount = 0.05 * self.problem.b_wage
+        self.a_discount = 0.1 * self.problem.a_wage
+        self.b_discount = 0.1 * self.problem.b_wage
         self.fitness = self.evaluate_function()
         
 

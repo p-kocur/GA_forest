@@ -102,6 +102,7 @@ class GeneticAlgorithm:
             mutation_probability = 1
   
         self.mutation_probability = mutation_probability
+        self.problem.mutation_probs = mutation_probs
         self.first_population = first_population 
         self.population_size = population_size
         self.max_iter = max_iter
